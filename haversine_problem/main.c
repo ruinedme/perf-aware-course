@@ -221,14 +221,6 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    const char *num = "-123.4567895";
-    char *end = NULL;
-    double n_strtod = strtod(num,&end);
-    double n_atof = fast_atof(num, strlen(num));
-    printf("checking: %s\n", num);
-    printf("strtod: %.15f\n", n_strtod);
-    printf("n_atof %.15f\n", n_atof);
-
     const char *path = argv[1];
     json_sax_handler_t h = {
         .error = on_error,
