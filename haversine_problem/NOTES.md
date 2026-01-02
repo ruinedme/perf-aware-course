@@ -23,10 +23,10 @@ Computing the haversine distance of each pair as they are parsed.
 2. Allocate a slab of 40 million doubles upfront, and pass each parsed number to that. 10M rows * 4 numbers/row = 40M
     - don't think i need to go this route any since the number parsing appears to have been the main bottleneck
 3. Parser optimizations:
-  - avoid per character function-call overhead
-  - user pointer walks and tight loops
-  - prefer zero-copy for strings when possible. (emit view into buffer with offsets rather than copying)
-  - move the number parser into the JSON parser and have the parser return doubles by default. This would allow the parser to avoid some memcpy and other allocations which could make this faster.
+    - avoid per character function-call overhead
+    - user pointer walks and tight loops
+    - prefer zero-copy for strings when possible. (emit view into buffer with offsets rather than copying)
+    - move the number parser into the JSON parser and have the parser return doubles by default. This would allow the parser to avoid some memcpy and other allocations which could make this faster.
 4. Try an NDJSON approach. There is a JSON streaming method that uses newlines as a delimiter for parsing smaller objects inside of larger ones.
     - Not going to go this route anymore. The current parser seems fine since the bottleneck was not parsing the JSON but converting strings to numbers
 99. Multi threading. A last resort, but the calculation of any haversine pair is not dependent upon any other pair.
