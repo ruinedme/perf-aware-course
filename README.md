@@ -1,5 +1,9 @@
 # Performance Aware Programming
 
+## Description
+
+The basic problem statement that this course will be reviewing is: Why computing the haversine distance over a series of points on a sphere is slow. In this case the distance between 2 points on Earth.
+
 ## CPU Details
 - Intel(R) Core(TM) i7-6800K CPU @ 3.40GHz
 - Cores 6
