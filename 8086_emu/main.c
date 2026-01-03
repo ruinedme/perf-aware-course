@@ -3,10 +3,6 @@
 #define BITS 16
 
 // OP CODE BIT MASKS
-const unsigned char OP_4_BIT_MASK = 0Xf0;  // 11110000
-const unsigned char OP_5_BIT_MASK = 0Xf8;  // 11111000
-const unsigned char OP_6_BIT_MASK = 0Xfc;  // 11111100
-const unsigned char OP_7_BIT_MASK = 0Xfe;  // 11111110
 const unsigned char OP_DIRECTION_MASK = 2; // 00000010
 const unsigned char OP_WORD_MASK = 1;      // 00000001
 
@@ -187,6 +183,15 @@ static void printInstructions(Prog *prog)
         }
         else if ((op & MOV_ACC_TO_MEM) == MOV_ACC_TO_MEM)
         {
+            // Note: due to the encoding this op must be checked before MOV_MEM_TO_ACC
+            /**
+             * 0xa3 & 0xa0 == 0xa0 && 0xa1 & 0xa0 == 0xa0
+             * mov ax, [2555] && mov ax, [16] respectivly
+             * 
+             * 0xa3 & 0xa2 == 0xa2 && 0xa1 & 0xa2 == 0xa0
+             * mov [2554], ax && mov [15], ax respectively
+             */
+
             unsigned char wide = (op & OP_WORD_MASK);
             unsigned char addr_lo = prog->buf[++prog->pos];
             unsigned short addr_hi = prog->buf[++prog->pos];
