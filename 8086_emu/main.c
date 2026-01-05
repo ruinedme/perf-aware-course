@@ -65,9 +65,6 @@ const unsigned char CMP_IMM_W_ACC = 0x3c; // 0011110w
 #define LOOPNZ_LOOPNE 0xe0
 #define JCXZ 0xe3
 
-// 01110111 11111110 -- nasm
-// 11100111 11111110
-
 // Register tables
 const char *BYTE_REGISTERS[8] = {"al", "cl", "dl", "bl", "ah", "ch", "dh", "bh"};
 const char *WORD_REGISTERS[8] = {"ax", "cx", "dx", "bx", "sp", "bp", "si", "di"};
@@ -137,7 +134,7 @@ static void printInstructions(Prog *prog)
     }
     char *disp_str = malloc(32);
     printf("bits %zu\n\n", BITS);
-    // 00000001 01011110 00000000
+
     while (prog->pos < prog->len)
     {
         const unsigned char op = prog->buf[prog->pos];
@@ -287,7 +284,6 @@ static void printInstructions(Prog *prog)
             }
             printf("mov %s, %hu\n", dest, value);
         }
-
         else if ((op & OP_7_BIT_MASK) == MOV_ACC_TO_MEM || (op & OP_7_BIT_MASK) == ADD_IMM_TO_ACC || (op & OP_7_BIT_MASK) == SUB_IMM_FROM_ACC || (op & OP_7_BIT_MASK) == CMP_IMM_W_ACC)
         {
             // Note: due to the encoding this op must be checked before MOV_MEM_TO_ACC
@@ -359,7 +355,7 @@ static void printInstructions(Prog *prog)
                     unsigned short value = (disp_hi << 8) + disp_lo;
                     unsigned char data_lo = prog->buf[++prog->pos];
                     const char *math_op = instruction == MOV_IMM_TO_RM ? "mov" : MATH_OPS[reg];
-                    // 10000011 00 111 110
+
                     unsigned char sw = (sign << 1) + wide;
                     switch (sw)
                     {
