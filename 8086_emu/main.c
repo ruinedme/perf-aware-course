@@ -2,9 +2,6 @@
 #include <stdlib.h>
 
 #define BITS 16
-#define DISP_STR_LEN 32
-#define U8_SIGN_MASK = 0X80
-#define U16_SIGN_MASK = 0x8000
 
 typedef unsigned char u8;
 typedef unsigned short u16;
@@ -29,11 +26,6 @@ const char *IMM_OPS[8] = {"add", "or", "adc", "sbb", "and", "sub", "xor", "cmp"}
 const char *SHIFT_OPS[8] = {"rol", "ror", "rcl", "rcr", "shl", "shr", NULL, "sar"};
 const char *GROUP1[8] = {"test", NULL, "not", "neg", "mul", "imul", "div", "idiv"};
 const char *GROUP2[8] = {"inc", "dec", "call", "call", "jmp", "jmp", "push", NULL};
-
-// Conditional Jump table
-const char *CONDITIONAL_JUMP[16] = {
-    "jo", "jno", "jb", "jnb", "je", "jne", "jbe", "ja",
-    "js", "jns", "jp", "jnp", "jl", "jnl", "jle", "jg"};
 
 // Mnemonic table
 const char *MNEMONIC[256] = {
@@ -215,6 +207,7 @@ static void displayInstruction(Prog *prog)
     Mod_Reg_RM op2 = {0};
     char *seg_reg = "";
 
+    // Segment register access
     if (op1 == 0x26 || op1 == 0x36 || op1 == 0x2e || op1 == 0x3e)
     {
         seg_reg = MNEMONIC[op1];
@@ -223,7 +216,6 @@ static void displayInstruction(Prog *prog)
 
     switch (op1)
     {
-    // Note no break;
     // Single byte ops
     case 0xf3:
     case 0xf0:
