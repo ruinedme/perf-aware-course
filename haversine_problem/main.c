@@ -193,7 +193,7 @@ void on_number(void *ud, const char *num_text, size_t len)
     // char *end = NULL;
     // double v = strtod(num_text, &end);
     // === atof variant ===
-    // double v = atof(num_text);
+    double v = atof(num_text);
 #endif
 
     if (strcmp(h->last_key, "x0") == 0)
