@@ -8,15 +8,21 @@
 #include <stddef.h>
 #include <ctype.h>
 
+#include "common.h"
 #include "sax_json.h"
+#include "timer.c"
 
-const double EARTH_RADIUS_KM = 6372.8;
+const f64 EARTH_RADIUS_KM = 6372.8;
+u64 haversineComputeTime = 0;
+
+#define CPUTIME_TO_MS(elapsed, cpuFreq) ((f64)((f64)elapsed / (f64)cpuFreq * 1000))
+
 #define ATOF_MULRECIP
 
 #ifdef ATOF_MULRECIP
-static double fast_atof(const char *s, size_t len);
+static f64 fast_atof(const char *s, size_t len);
 #define MAX_FRAC 15
-static const double inv_pow10[MAX_FRAC + 1] = {
+static const f64 inv_pow10[MAX_FRAC + 1] = {
     1.0,
     0.1,
     0.01,
@@ -35,7 +41,7 @@ static const double inv_pow10[MAX_FRAC + 1] = {
     0.000000000000001,
 };
 
-static double fast_atof(const char *s, size_t len)
+static f64 fast_atof(const char *s, size_t len)
 {
     const char *p = s;
     const char *end = s + len;
@@ -101,11 +107,11 @@ static double fast_atof(const char *s, size_t len)
     }
 
     // build the value
-    double value = (double)int_part;
+    f64 value = (f64)int_part;
     if (frac_digits > 0)
     {
         int used_frac_digits = frac_digits > MAX_FRAC ? MAX_FRAC : frac_digits;
-        value += (double)frac_part * inv_pow10[used_frac_digits];
+        value += (f64)frac_part * inv_pow10[used_frac_digits];
     }
 
     return sign < 0 ? -value : value;
@@ -114,32 +120,32 @@ static double fast_atof(const char *s, size_t len)
 
 typedef struct
 {
-    double x0, y0, x1, y1;
+    f64 x0, y0, x1, y1;
     unsigned seen;
 } pair_t;
 
 typedef struct
 {
-    double sum;
-    double c;
+    f64 sum;
+    f64 c;
     size_t count;
 } acc_t;
 
-static double deg2rad(double degrees)
+static f64 deg2rad(f64 degrees)
 {
-    double result = 0.017453292519943295 * degrees;
+    f64 result = 0.017453292519943295 * degrees;
     return result;
 }
 
 // The Haversine function
-static double compute(pair_t *p, long R)
+static f64 compute(pair_t *p, long R)
 {
-    double dY = deg2rad(p->y1 - p->y0);
-    double dX = deg2rad(p->x1 - p->x0);
-    double y0 = deg2rad(p->y0);
-    double y1 = deg2rad(p->y1);
-    double rootTerm = (pow(sin(dY / 2), 2)) + cos(y0) * cos(y1) * (pow(sin(dX / 2), 2));
-    double result = 2.0 * R * asin(sqrt(rootTerm));
+    f64 dY = deg2rad(p->y1 - p->y0);
+    f64 dX = deg2rad(p->x1 - p->x0);
+    f64 y0 = deg2rad(p->y0);
+    f64 y1 = deg2rad(p->y1);
+    f64 rootTerm = (pow(sin(dY / 2), 2)) + cos(y0) * cos(y1) * (pow(sin(dX / 2), 2));
+    f64 result = 2.0 * R * asin(sqrt(rootTerm));
 
     return result;
 }
@@ -151,21 +157,21 @@ static void acc_init(acc_t *a)
     a->count = 0;
 }
 
-static void acc_add(acc_t *a, double value)
+static void acc_add(acc_t *a, f64 value)
 {
     // Kahan add
-    double y = value - a->c;
-    double t = a->sum + y;
+    f64 y = value - a->c;
+    f64 t = a->sum + y;
     a->c = (t - a->sum) - y;
     a->sum = t;
     a->count++;
 }
 
-static double acc_average(const acc_t *a)
+static f64 acc_average(const acc_t *a)
 {
     if (a->count == 0)
         return 0.0;
-    return a->sum / (double)a->count;
+    return a->sum / (f64)a->count;
 }
 
 typedef struct
@@ -187,13 +193,13 @@ void on_number(void *ud, const char *num_text, size_t len)
     handler_ud_t *h = ud;
 
 #ifdef ATOF_MULRECIP
-    double v = fast_atof(num_text, len);
+    f64 v = fast_atof(num_text, len);
 #else
     // === strtod variant ===
     // char *end = NULL;
-    // double v = strtod(num_text, &end);
+    // f64 v = strtod(num_text, &end);
     // === atof variant ===
-    double v = atof(num_text);
+    f64 v = atof(num_text);
 #endif
 
     if (strcmp(h->last_key, "x0") == 0)
@@ -224,7 +230,9 @@ void on_end_object(void *ud)
 
     if (h->current.seen == 15)
     {
-        double val = compute(&h->current, EARTH_RADIUS_KM);
+        u64 s = ReadCPUTimer();
+        f64 val = compute(&h->current, EARTH_RADIUS_KM);
+        haversineComputeTime += ReadCPUTimer() - s;
         acc_add(&h->acc, val);
     }
 
@@ -247,6 +255,9 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    u64 cpuFreq = GetCPUFreq(100);
+    u64 startTime = ReadCPUTimer();
+    // START UP TIME
     const char *path = argv[1];
     json_sax_handler_t h = {
         .error = on_error,
@@ -260,20 +271,29 @@ int main(int argc, char *argv[])
     memset(&ud.current, 0, sizeof(pair_t));
     acc_init(&ud.acc);
 
-    time_t startTime = time(NULL);
+
+    // END START UP TIME/ START PARSE TIME
+    u64 parseStart = ReadCPUTimer();
     if (!parse_file_with_sax(path, &h, &ud))
     {
         return EXIT_FAILURE;
     }
-
-    double avg = acc_average(&ud.acc);
-    time_t endTime = time(NULL);
+    
+    f64 avg = acc_average(&ud.acc);
+    // END PARSE TIME
+    u64 endTime = ReadCPUTimer();
 
     // === DISPLAY RESULT ===
-
+    u64 Totalelapsed = endTime - startTime;
+    u64 startup = parseStart - startTime;
+    u64 parse = endTime - parseStart - haversineComputeTime;
+    
     printf("Result %.16f\n", avg);
-    printf("Throughput = %.4f haversines/second\n", (double)((double)ud.acc.count / (double)(endTime - startTime)));
-    printf("Total = %ld seconds\n", endTime - startTime);
+    printf("Total Time: %.4fms (CPU Freq %llu)\n", CPUTIME_TO_MS(Totalelapsed, cpuFreq), cpuFreq);
+    printf("Startup: %.4fms (%.2f%%)\n", CPUTIME_TO_MS(startup, cpuFreq), (f64)startup/ (f64)Totalelapsed * 100.0);
+    printf("Parse: %.4fms (%.2f%%)\n", CPUTIME_TO_MS(parse, cpuFreq), (f64)parse / (f64)Totalelapsed * 100.0);
+    printf("Haversine Compute: %.4fms (%.2f%%)\n", CPUTIME_TO_MS(haversineComputeTime, cpuFreq), (f64)haversineComputeTime / (f64)Totalelapsed * 100.0);
+    printf("Throughput = %.4f haversines/second\n", (f64)((f64)ud.acc.count / CPUTIME_TO_MS(haversineComputeTime, cpuFreq) * 1000));
 
     return EXIT_SUCCESS;
 }

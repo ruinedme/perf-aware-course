@@ -11,6 +11,16 @@ Computing the haversine distance of each pair as they are parsed.
     Throughput = 263157.8947 haversines/second
 ```
 
+Timings with RDTSC. 
+```
+    Result 10010.6265214267859847
+    Total Time: 15349.3729ms (CPU Freq 3399993550)
+    Startup: 0.0001ms (0.00%)
+    Parse: 12232.5051ms (79.69%)
+    Haversine Compute: 3116.8676ms (20.31%)
+    Throughput = 3208349.3084 haversines/second
+```
+
 ## THINGS TO TRY
 
 1. Test if doing the haversine calculation in on_end_object event slows the process down.
