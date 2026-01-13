@@ -9,16 +9,14 @@
 #include <ctype.h>
 
 #include "sax_json.h"
-#define PI 3.141592
 
-const double EARTH_RADIUS_KM = 6371.0;
+const double EARTH_RADIUS_KM = 6372.8;
 #define ATOF_MULRECIP
 
-static double fast_atof(const char *s, size_t len);
-
 #ifdef ATOF_MULRECIP
+static double fast_atof(const char *s, size_t len);
 #define MAX_FRAC 15
-static const double inv_pow10[MAX_FRAC+1] = {
+static const double inv_pow10[MAX_FRAC + 1] = {
     1.0,
     0.1,
     0.01,
@@ -37,23 +35,29 @@ static const double inv_pow10[MAX_FRAC+1] = {
     0.000000000000001,
 };
 
-static double fast_atof(const char *s, size_t len){
+static double fast_atof(const char *s, size_t len)
+{
     const char *p = s;
     const char *end = s + len;
-    if (p == end) return 0.0;
+    if (p == end)
+        return 0.0;
     // sign
     int sign = 1;
-    if(*p =='-'){
+    if (*p == '-')
+    {
         sign = -1;
         ++p;
-    }else if(*p == '+'){
+    }
+    else if (*p == '+')
+    {
         ++p;
     }
 
     // integer part
     uint64_t int_part = 0;
-    while (p< end && *p >= '0' && *p <= '9'){
-        int_part = int_part * 10 + (uint64_t)(*p -'0');
+    while (p < end && *p >= '0' && *p <= '9')
+    {
+        int_part = int_part * 10 + (uint64_t)(*p - '0');
         ++p;
     }
 
@@ -61,13 +65,18 @@ static double fast_atof(const char *s, size_t len){
     uint64_t frac_part = 0;
     int frac_digits = 0;
     int extra_digit = -1;
-    if(p<end && *p == '.'){
+    if (p < end && *p == '.')
+    {
         ++p;
-        while (p < end && *p >= '0' && *p <= '9'){
-            if(frac_digits < MAX_FRAC){
+        while (p < end && *p >= '0' && *p <= '9')
+        {
+            if (frac_digits < MAX_FRAC)
+            {
                 frac_part = frac_part * 10 + (uint64_t)(*p - '0');
                 ++frac_digits;
-            }else if (frac_digits == MAX_FRAC){
+            }
+            else if (frac_digits == MAX_FRAC)
+            {
                 extra_digit = *p - '0';
                 frac_digits++;
             }
@@ -76,13 +85,16 @@ static double fast_atof(const char *s, size_t len){
     }
 
     // rounding
-    if(frac_digits > MAX_FRAC && extra_digit >= 0 && extra_digit >= 5){
+    if (frac_digits > MAX_FRAC && extra_digit >= 0 && extra_digit >= 5)
+    {
         uint64_t denom = 1;
-        for(int i=0;i<MAX_FRAC;++i){
+        for (int i = 0; i < MAX_FRAC; ++i)
+        {
             denom *= 10ULL;
         }
         frac_part += 1ULL;
-        if(frac_part >= (uint64_t)denom){
+        if (frac_part >= (uint64_t)denom)
+        {
             frac_part -= (uint64_t)denom;
             int_part += 1ULL;
         }
@@ -90,15 +102,15 @@ static double fast_atof(const char *s, size_t len){
 
     // build the value
     double value = (double)int_part;
-    if(frac_digits > 0){
+    if (frac_digits > 0)
+    {
         int used_frac_digits = frac_digits > MAX_FRAC ? MAX_FRAC : frac_digits;
         value += (double)frac_part * inv_pow10[used_frac_digits];
     }
-    
+
     return sign < 0 ? -value : value;
 }
 #endif
-
 
 typedef struct
 {
@@ -115,7 +127,7 @@ typedef struct
 
 static double deg2rad(double degrees)
 {
-    double result = (degrees * PI) / 180;
+    double result = 0.017453292519943295 * degrees;
     return result;
 }
 
@@ -127,7 +139,7 @@ static double compute(pair_t *p, long R)
     double y0 = deg2rad(p->y0);
     double y1 = deg2rad(p->y1);
     double rootTerm = (pow(sin(dY / 2), 2)) + cos(y0) * cos(y1) * (pow(sin(dX / 2), 2));
-    double result = 2 * R * asin(sqrt(rootTerm));
+    double result = 2.0 * R * asin(sqrt(rootTerm));
 
     return result;
 }
@@ -156,46 +168,62 @@ static double acc_average(const acc_t *a)
     return a->sum / (double)a->count;
 }
 
-typedef struct {
+typedef struct
+{
     pair_t current;
     char last_key[16];
     acc_t acc;
 } handler_ud_t;
 
-
-void on_key(void *ud, const char *key){
+void on_key(void *ud, const char *key)
+{
     handler_ud_t *h = ud;
-    strncpy(h->last_key, key, sizeof(h->last_key)-1);
-    h->last_key[sizeof(h->last_key)-1] = '\0';
+    strncpy(h->last_key, key, sizeof(h->last_key) - 1);
+    h->last_key[sizeof(h->last_key) - 1] = '\0';
 }
 
-void on_number(void *ud, const char *num_text, size_t len){
+void on_number(void *ud, const char *num_text, size_t len)
+{
     handler_ud_t *h = ud;
-    // strtod
+
+#ifdef ATOF_MULRECIP
+    double v = fast_atof(num_text, len);
+#else
+    // === strtod variant ===
     // char *end = NULL;
     // double v = strtod(num_text, &end);
-    // =====
-    double v = fast_atof(num_text, len);
+    // === atof variant ===
+    // double v = atof(num_text);
+#endif
 
-    if(strcmp(h->last_key, "x0") == 0){
-        h->current.x0 =v;
+    if (strcmp(h->last_key, "x0") == 0)
+    {
+        h->current.x0 = v;
         h->current.seen += 1;
-    }else if(strcmp(h->last_key, "y0") == 0){
-        h->current.y0 =v;
+    }
+    else if (strcmp(h->last_key, "y0") == 0)
+    {
+        h->current.y0 = v;
         h->current.seen += 2;
-    }else if (strcmp(h->last_key, "x1") == 0){
-        h->current.x1 =v;
+    }
+    else if (strcmp(h->last_key, "x1") == 0)
+    {
+        h->current.x1 = v;
         h->current.seen += 4;
-    }else if (strcmp(h->last_key, "y1") == 0){
-        h->current.y1 =v;
+    }
+    else if (strcmp(h->last_key, "y1") == 0)
+    {
+        h->current.y1 = v;
         h->current.seen += 8;
     }
 }
 
-void on_end_object(void *ud){
+void on_end_object(void *ud)
+{
     handler_ud_t *h = ud;
 
-    if (h->current.seen == 15){
+    if (h->current.seen == 15)
+    {
         double val = compute(&h->current, EARTH_RADIUS_KM);
         acc_add(&h->acc, val);
     }
@@ -210,8 +238,6 @@ void on_error(void *ud, const char *msg, size_t pos)
     (void)ud;
     fprintf(stderr, "Parser error at byte %zu: %s\n", pos, msg);
 }
-
-
 
 int main(int argc, char *argv[])
 {
@@ -245,7 +271,7 @@ int main(int argc, char *argv[])
 
     // === DISPLAY RESULT ===
 
-    printf("Result %.6f\n", avg);
+    printf("Result %.16f\n", avg);
     printf("Throughput = %.4f haversines/second\n", (double)((double)ud.acc.count / (double)(endTime - startTime)));
     printf("Total = %ld seconds\n", endTime - startTime);
 

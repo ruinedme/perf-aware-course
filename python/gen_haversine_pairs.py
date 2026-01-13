@@ -7,10 +7,10 @@ JSONFile.write('{"pairs": [\n')
 UPPER_BOUND = 10_000_000
 # data = {"pairs":[]}
 for i in range(0,UPPER_BOUND):
-    x0 = float('%.6f' % random.uniform(-180.0,180.0))
-    y0 = float('%.6f' % random.uniform(-180.0,180.0))
-    x1 = float('%.6f' % random.uniform(-180.0,180.0))
-    y1 = float('%.6f' % random.uniform(-180.0,180.0))
+    x0 = float('%.15f' % random.uniform(-180.0,180.0))
+    y0 = float('%.15f' % random.uniform(-90.0,90.0))
+    x1 = float('%.15f' % random.uniform(-180.0,180.0))
+    y1 = float('%.15f' % random.uniform(-90.0,90.0))
 
     JSONFile.write(f'\t{{"x0": {x0}, "y0": {y0}, "x1": {x1}, "y1": {y1}}}')
     if (i < UPPER_BOUND-1):
