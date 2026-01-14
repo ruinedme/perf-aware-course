@@ -14,10 +14,10 @@
 #include "sax_json.h"
 #include "profiler.c"
 
-const f64 EARTH_RADIUS_KM = 6372.8;
-static u64 distance_count = 0;
-static f64 fast_atof(const char *s, size_t len);
 #define MAX_FRAC 15
+const f64 EARTH_RADIUS_KM = 6372.8;
+
+static f64 fast_atof(const char *s, size_t len);
 static const f64 inv_pow10[MAX_FRAC + 1] = {
     1.0,
     0.1,
@@ -139,7 +139,6 @@ static f64 deg2rad(f64 degrees)
 f64 haversine_distance(pair_t *p, f64 R)
 {
     START_SCOPE(_s,__func__);
-    ++distance_count;
     f64 dY = deg2rad(p->y1 - p->y0);
     f64 dX = deg2rad(p->x1 - p->x0);
     f64 y0 = deg2rad(p->y0);
