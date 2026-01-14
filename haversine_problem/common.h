@@ -1,7 +1,9 @@
 #ifndef COMMON_H
 #define COMMON_H
+#include <inttypes.h>
 
-typedef unsigned long long u64;
+typedef uint64_t u64;
+typedef uint32_t u32;
 typedef double f64;
 
 #endif

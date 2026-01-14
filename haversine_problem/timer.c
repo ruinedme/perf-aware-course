@@ -19,6 +19,9 @@ static u64 ReadCPUTimer(){
     return __rdtsc();
 }
 
+/// @brief Gets estimated CPU frequency. The higher the waitTime value the more precise the return value will be
+/// @param waitTime Default is 1000 milliseconds. 
+/// @return Estimated CPU frequency
 static u64 GetCPUFreq(u64 waitTime){
     u64 millisecondsToWait = 1000;
     if(waitTime){

@@ -12,16 +12,10 @@
 
 #include "common.h"
 #include "sax_json.h"
-#include "timer.c"
+#include "profiler.c"
 
 const f64 EARTH_RADIUS_KM = 6372.8;
-u64 haversineComputeTime = 0;
-
-#define CPUTIME_TO_MS(elapsed, cpuFreq) ((f64)((f64)elapsed / (f64)cpuFreq * 1000))
-
-#define ATOF_MULRECIP
-
-#ifdef ATOF_MULRECIP
+static u64 distance_count = 0;
 static f64 fast_atof(const char *s, size_t len);
 #define MAX_FRAC 15
 static const f64 inv_pow10[MAX_FRAC + 1] = {
@@ -45,6 +39,7 @@ static const f64 inv_pow10[MAX_FRAC + 1] = {
 
 static f64 fast_atof(const char *s, size_t len)
 {
+    START_SCOPE(_s, __func__);
     const char *p = s;
     const char *end = s + len;
     if (p == end)
@@ -116,9 +111,10 @@ static f64 fast_atof(const char *s, size_t len)
         value += (f64)frac_part * inv_pow10[used_frac_digits];
     }
 
-    return sign < 0 ? -value : value;
+    f64 result = sign < 0 ? -value : value;
+    END_SCOPE(_s);
+    return result;
 }
-#endif
 
 typedef struct
 {
@@ -140,8 +136,10 @@ static f64 deg2rad(f64 degrees)
 }
 
 // The Haversine function
-static f64 compute(pair_t *p, f64 R)
+f64 haversine_distance(pair_t *p, f64 R)
 {
+    START_SCOPE(_s,__func__);
+    ++distance_count;
     f64 dY = deg2rad(p->y1 - p->y0);
     f64 dX = deg2rad(p->x1 - p->x0);
     f64 y0 = deg2rad(p->y0);
@@ -149,6 +147,7 @@ static f64 compute(pair_t *p, f64 R)
     f64 rootTerm = (pow(sin(dY / 2.0), 2.0)) + cos(y0) * cos(y1) * (pow(sin(dX / 2.0), 2.0));
     f64 result = 2.0 * R * asin(sqrt(rootTerm));
 
+    END_SCOPE(_s);
     return result;
 }
 
@@ -192,17 +191,10 @@ void on_key(void *ud, const char *key)
 
 void on_number(void *ud, const char *num_text, size_t len)
 {
-    handler_ud_t *h = ud;
 
-#ifdef ATOF_MULRECIP
+    START_SCOPE(_s, __func__);
+    handler_ud_t *h = ud;
     f64 v = fast_atof(num_text, len);
-#else
-    // === strtod variant ===
-    // char *end = NULL;
-    // f64 v = strtod(num_text, &end);
-    // === atof variant ===
-    f64 v = atof(num_text);
-#endif
 
     if (strcmp(h->last_key, "x0") == 0)
     {
@@ -224,6 +216,7 @@ void on_number(void *ud, const char *num_text, size_t len)
         h->current.y1 = v;
         h->current.seen += 8;
     }
+    END_SCOPE(_s);
 }
 
 void on_end_object(void *ud)
@@ -232,9 +225,7 @@ void on_end_object(void *ud)
 
     if (h->current.seen == 15)
     {
-        u64 s = ReadCPUTimer();
-        f64 val = compute(&h->current, EARTH_RADIUS_KM);
-        haversineComputeTime += ReadCPUTimer() - s;
+        f64 val = haversine_distance(&h->current, EARTH_RADIUS_KM);
         acc_add(&h->acc, val);
     }
 
@@ -251,51 +242,38 @@ void on_error(void *ud, const char *msg, size_t pos)
 
 int main(int argc, char *argv[])
 {
+    begin_profile();
     if (argc != 2)
     {
         fprintf(stderr, "Usage: %s file\n", argv[0]);
         return 1;
     }
 
-    u64 cpuFreq = GetCPUFreq(100);
-    u64 startTime = ReadCPUTimer();
-    // START UP TIME
     const char *path = argv[1];
     json_sax_handler_t h = {
         .error = on_error,
         .end_object = on_end_object,
         .number = on_number,
-        .key = on_key
-    };
+        .key = on_key};
 
     handler_ud_t ud;
     memset(&ud, 0, sizeof(ud));
     memset(&ud.current, 0, sizeof(pair_t));
     acc_init(&ud.acc);
 
-
-    // END START UP TIME/ START PARSE TIME
-    u64 parseStart = ReadCPUTimer();
+    START_SCOPE(_s, "parse_file_with_sax");
     if (!parse_file_with_sax(path, &h, &ud))
     {
         return EXIT_FAILURE;
     }
-    
+    END_SCOPE(_s);
+
     f64 avg = acc_average(&ud.acc);
-    // END PARSE TIME
-    u64 endTime = ReadCPUTimer();
 
     // === DISPLAY RESULT ===
-    u64 Totalelapsed = endTime - startTime;
-    u64 startup = parseStart - startTime;
-    u64 parse = endTime - parseStart - haversineComputeTime;
-    
+    end_and_print_profile();
     printf("Result %.16f\n", avg);
-    printf("Total Time: %.4fms (CPU Freq %llu)\n", CPUTIME_TO_MS(Totalelapsed, cpuFreq), cpuFreq);
-    printf("Startup: %.4fms (%.2f%%)\n", CPUTIME_TO_MS(startup, cpuFreq), (f64)startup/ (f64)Totalelapsed * 100.0);
-    printf("Parse: %.4fms (%.2f%%)\n", CPUTIME_TO_MS(parse, cpuFreq), (f64)parse / (f64)Totalelapsed * 100.0);
-    printf("Haversine Compute: %.4fms (%.2f%%)\n", CPUTIME_TO_MS(haversineComputeTime, cpuFreq), (f64)haversineComputeTime / (f64)Totalelapsed * 100.0);
-    printf("Throughput = %.4f haversines/second\n", (f64)((f64)ud.acc.count / CPUTIME_TO_MS(haversineComputeTime, cpuFreq) * 1000));
+    printf("distance count? %llu\n", distance_count);
 
     return EXIT_SUCCESS;
 }
