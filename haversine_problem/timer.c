@@ -1,4 +1,4 @@
-#include <x86intrin.h>
+#include <intrin.h>
 #include <windows.h>
 
 #include "common.h"

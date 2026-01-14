@@ -1,3 +1,5 @@
+#define _CRT_SECURE_NO_WARNINGS
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -832,7 +834,7 @@ static bool process_chunk(json_sax_parser_t *parser, const char *buf, size_t buf
         if (parser->u_remaining > 0 && parser->state == ST_STRING)
         {
             int needed = parser->u_remaining;
-            int j = i;
+            size_t j = i;
             while (needed > 0 && j < (int)buflen)
             {
                 int v = hex_val(buf[j]);
@@ -846,7 +848,7 @@ static bool process_chunk(json_sax_parser_t *parser, const char *buf, size_t buf
                 j++;
                 parser->position++;
             }
-            int consumed = j - (int)i;
+            size_t consumed = j - (int)i;
             i += consumed;
             parser->u_remaining = needed;
             if (parser->u_remaining == 0)

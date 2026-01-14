@@ -1,3 +1,5 @@
+#define _CRT_SECURE_NO_WARNINGS
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -138,13 +140,13 @@ static f64 deg2rad(f64 degrees)
 }
 
 // The Haversine function
-static f64 compute(pair_t *p, long R)
+static f64 compute(pair_t *p, f64 R)
 {
     f64 dY = deg2rad(p->y1 - p->y0);
     f64 dX = deg2rad(p->x1 - p->x0);
     f64 y0 = deg2rad(p->y0);
     f64 y1 = deg2rad(p->y1);
-    f64 rootTerm = (pow(sin(dY / 2), 2)) + cos(y0) * cos(y1) * (pow(sin(dX / 2), 2));
+    f64 rootTerm = (pow(sin(dY / 2.0), 2.0)) + cos(y0) * cos(y1) * (pow(sin(dX / 2.0), 2.0));
     f64 result = 2.0 * R * asin(sqrt(rootTerm));
 
     return result;
