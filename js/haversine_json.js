@@ -15,12 +15,8 @@ function epochTime(date) {
  * @returns The given value in radians
  */
 function deg2rad(degrees) {
-    // (degrees - (Math.floor(degrees / 360) * 360)) -360; // Negative degrees
-    let clamped = degrees - (Math.floor(degrees / 360) * 360);
-    if (degrees < 0) {
-        clamped -= 360;
-    }
-    return clamped * Math.PI / 180;
+    const result = 0.017453292519943295 * degrees;
+    return result;
 }
 
 
@@ -58,7 +54,7 @@ function haversineOfDegrees(x0, y0, x1, y1, R) {
     y0 = deg2rad(y0);
     y1 = deg2rad(y1);
 
-    const rootTerm = (Math.pow(Math.sin(dY / 2), 2)) + Math.cos(y0) * Math.cos(y1) * (Math.pow(Math.sin(dX / 2), 2));
+    const rootTerm = (Math.pow(Math.sin(dY / 2.0), 2)) + Math.cos(y0) * Math.cos(y1) * (Math.pow(Math.sin(dX / 2.0), 2));
     const result = 2 * R * Math.asin(Math.sqrt(rootTerm));
     
     return result;
@@ -73,7 +69,7 @@ function kahan_add(acc, value){
     acc.count++;
 }
 
-const EarthRadiuskm = 6371;
+const EarthRadiuskm = 6372.8;
 
 let acc = {
     sum : 0.0,
@@ -84,7 +80,6 @@ let acc = {
 for (pair of JSONInput['pairs']) {
     const distance = haversineOfDegrees(pair['x0'], pair['y0'], pair['x1'], pair['y1'], EarthRadiuskm);
     kahan_add(acc, distance);
-    acc.count++;
 }
 
 const average = acc.sum / acc.count;
