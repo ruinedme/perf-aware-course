@@ -10,7 +10,7 @@ compile:
 # 	-I../sax_json -L../sax_json/bin -Wl,-rpath,'${ORIGIN}/../sax_json/bin' \
 # 	main.c -lsax_json
 #	cl /O2 /W4 /Febin\main.exe /DL /I..\sax_json ..\sax_json\bin\sax_json.obj main
-	cl /c /TC /O2 /W4 /Fa /I..\sax_json /Fobin\main.obj main.c
+	cl /c /TC /O2 /W4 /I..\sax_json /Fobin\main.obj main.c
 
 link:
 	cl /Febin\main.exe /DL /I..\sax_json ..\sax_json\bin\sax_json.obj bin\main.obj
