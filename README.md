@@ -61,10 +61,10 @@ Note: The time discrepency between the baseline and this one is from switching f
 
 Using RDTSC
 ```
-    Result 10010.6265214267859847
-    Total Time: 15349.3729ms (CPU Freq 3399993550)
-    Startup: 0.0001ms (0.00%)
-    Parse: 12232.5051ms (79.69%)
-    Haversine Compute: 3116.8676ms (20.31%)
-    Throughput = 3208349.3084 haversines/second
+    Result 10011.8833483597973100
+    Total Time: 10458.1621ms (CPU Freq 3399997060)
+    Startup: 0.0000ms (0.00%)
+    Parse: 9324.6711ms (89.16%)
+    Haversine Compute: 1133.4910ms (10.84%)
+    Throughput = 8822301.8713 haversines/second
 ```
