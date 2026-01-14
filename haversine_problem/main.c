@@ -273,7 +273,6 @@ int main(int argc, char *argv[])
     // === DISPLAY RESULT ===
     end_and_print_profile();
     printf("Result %.16f\n", avg);
-    printf("distance count? %llu\n", distance_count);
 
     return EXIT_SUCCESS;
 }
