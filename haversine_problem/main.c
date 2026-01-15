@@ -11,8 +11,8 @@
 #include <ctype.h>
 
 #include "common.h"
-#include "sax_json.h"
 #include "profiler.c"
+#include "sax_json.c"
 
 #define MAX_FRAC 15
 const f64 EARTH_RADIUS_KM = 6372.8;
@@ -183,9 +183,11 @@ typedef struct
 
 void on_key(void *ud, const char *key)
 {
+    START_SCOPE(_s,__func__);
     handler_ud_t *h = ud;
     strncpy(h->last_key, key, sizeof(h->last_key) - 1);
     h->last_key[sizeof(h->last_key) - 1] = '\0';
+    RETURN_VOID(_s);
 }
 
 void on_number(void *ud, const char *num_text, size_t len)
@@ -220,6 +222,7 @@ void on_number(void *ud, const char *num_text, size_t len)
 
 void on_end_object(void *ud)
 {
+    START_SCOPE(_s,__func__);
     handler_ud_t *h = ud;
 
     if (h->current.seen == 15)
@@ -231,6 +234,7 @@ void on_end_object(void *ud)
     // Blank current for next object
     memset(&h->current, 0, sizeof(h->current));
     h->last_key[0] = '\0';
+    RETURN_VOID(_s);
 }
 
 void on_error(void *ud, const char *msg, size_t pos)
@@ -260,12 +264,10 @@ int main(int argc, char *argv[])
     memset(&ud.current, 0, sizeof(pair_t));
     acc_init(&ud.acc);
 
-    START_SCOPE(_s, "parse_file_with_sax");
     if (!parse_file_with_sax(path, &h, &ud))
     {
         return EXIT_FAILURE;
     }
-    END_SCOPE(_s);
 
     f64 avg = acc_average(&ud.acc);
 

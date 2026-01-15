@@ -9,11 +9,10 @@ compile:
 # 	-Wall -Wextra -Wpedantic -o bin/main.exe \
 # 	-I../sax_json -L../sax_json/bin -Wl,-rpath,'${ORIGIN}/../sax_json/bin' \
 # 	main.c -lsax_json
-#	cl /O2 /W4 /Febin\main.exe /DL /I..\sax_json ..\sax_json\bin\sax_json.obj main
-	cl /c /TC /W4 /nologo /O2 /Zi /Fdbin\main.pdb  /I..\sax_json /Fobin\main.obj main.c
+	cl /c /TC /W4 /nologo /O2 /Zi /Fdbin\main.pdb /Fobin\main.obj main.c
 
 link:
-	cl /nologo /Febin\main.exe /DL /I..\sax_json ..\sax_json\bin\sax_json.obj bin\main.obj
+	cl /nologo /Febin\main.exe /DL bin\main.obj
 
 build: compile link
 

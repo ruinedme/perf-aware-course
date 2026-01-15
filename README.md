@@ -61,10 +61,24 @@ Note: The time discrepency between the baseline and this one is from switching f
 
 Using RDTSC
 ```
-    Result 10011.8833483597973100
-    Total Time: 10458.1621ms (CPU Freq 3399997060)
-    Startup: 0.0000ms (0.00%)
-    Parse: 9324.6711ms (89.16%)
-    Haversine Compute: 1133.4910ms (10.84%)
-    Throughput = 8822301.8713 haversines/second
+Result 10011.8833483597973100
+Total Time: 10458.1621ms (CPU Freq 3399997060)
+Startup: 0.0000ms (0.00%)
+Parse: 9324.6711ms (89.16%)
+Haversine Compute: 1133.4910ms (10.84%)
+Throughput = 8822301.8713 haversines/second
+```
+
+Nested Profiler
+```
+Total time: 12496.6037ms (CPU freq 3399998670)
+  process_chunk[261639]: 20854743486 (49.08%, 85.99% w/children)
+  json_sax_parse_file[1]: 5952365696 (14.01%, 100.00% w/children)
+  parse_file_with_sax[1]: 452416 (0.00%, 100.00% w/children)
+  fast_atof[40000000]: 4676801078 (11.01%)
+  haversine_distance[10000000]: 3946006241 (9.29%)
+  on_key[40000001]: 1900495240 (4.47%)
+  on_number[40000000]: 3990956706 (9.39%, 20.40% w/children)
+  on_end_object[10000001]: 1166606423 (2.75%, 12.03% w/children)
+Result 10011.8833483597973100
 ```
