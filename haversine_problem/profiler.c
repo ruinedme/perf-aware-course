@@ -4,8 +4,8 @@
 
 typedef struct
 {
-    u64 TSCElapsed;
-    u64 TSCElapsedChildren;
+    u64 TSCElapsedExclusive;
+    u64 TSCElapsedInclusive;
     u64 HitCount;
     const char *Label;
 } profile_anchor;
@@ -24,6 +24,7 @@ typedef struct
 {
     const char *Label;
     u64 StartTSC;
+    u64 OldTSCElapsedInclusive;
     u32 ParentIndex;
     u32 AnchorIndex;
 } profile_block;
@@ -35,6 +36,9 @@ static inline profile_block profile_block_begin(const char *Label, u32 AnchorInd
     pb.Label = Label;
     pb.AnchorIndex = AnchorIndex;
 
+    profile_anchor *anchor = GlobalProfiler.Anchors + pb.AnchorIndex;
+    pb.OldTSCElapsedInclusive= anchor->TSCElapsedInclusive;
+
     GlobalProfilerParent = AnchorIndex;
     pb.StartTSC = ReadCPUTimer();
 
@@ -44,13 +48,14 @@ static inline profile_block profile_block_begin(const char *Label, u32 AnchorInd
 static inline void profile_block_end(profile_block *pb)
 {
     u64 elasped = ReadCPUTimer() - pb->StartTSC;
-
     GlobalProfilerParent = pb->ParentIndex;
+
     profile_anchor *parent = GlobalProfiler.Anchors + pb->ParentIndex;
     profile_anchor *anchor = GlobalProfiler.Anchors + pb->AnchorIndex;
 
-    parent->TSCElapsedChildren += elasped;
-    anchor->TSCElapsed += elasped;
+    parent->TSCElapsedExclusive -= elasped;
+    anchor->TSCElapsedExclusive += elasped;
+    anchor->TSCElapsedInclusive += pb->OldTSCElapsedInclusive + elasped;
     ++anchor->HitCount;
     anchor->Label = pb->Label;
 }
@@ -62,11 +67,10 @@ static inline void profile_block_end(profile_block *pb)
 
 static void print_time_elapsed(u64 total_tsc_elapsed, profile_anchor *anchor)
 {
-    u64 elapsed = anchor->TSCElapsed - anchor->TSCElapsedChildren;
-    f64 percent = 100.0 * ((f64)elapsed / (f64)total_tsc_elapsed);
-    printf("  %s[%llu]: %llu (%.2f%%", anchor->Label, anchor->HitCount, elapsed, percent);
-    if(anchor->TSCElapsedChildren){
-        f64 percent_with_children = 100.0 * ((f64)anchor->TSCElapsed/(f64)total_tsc_elapsed);
+    f64 percent = 100.0 * ((f64)anchor->TSCElapsedExclusive / (f64)total_tsc_elapsed);
+    printf("  %s[%llu]: %llu (%.2f%%", anchor->Label, anchor->HitCount, anchor->TSCElapsedExclusive, percent);
+    if(anchor->TSCElapsedInclusive != anchor->TSCElapsedExclusive){
+        f64 percent_with_children = 100.0 * ((f64)anchor->TSCElapsedInclusive/(f64)total_tsc_elapsed);
         printf(", %.2f%% w/children", percent_with_children);
     }
 
@@ -93,7 +97,7 @@ static void end_and_print_profile()
     for (u32 AnchorIndex = 0; AnchorIndex < MAX_ANCHORS; ++AnchorIndex)
     {
         profile_anchor *Anchor = GlobalProfiler.Anchors + AnchorIndex;
-        if (Anchor->TSCElapsed)
+        if (Anchor->TSCElapsedInclusive)
         {
             print_time_elapsed(total_cpu_elapsed, Anchor);
         }

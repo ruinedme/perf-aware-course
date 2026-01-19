@@ -82,3 +82,33 @@ Total time: 12496.6037ms (CPU freq 3399998670)
   on_end_object[10000001]: 1166606423 (2.75%, 12.03% w/children)
 Result 10011.8833483597973100
 ```
+
+Support for profiling recursive blocks
+```
+Total time: 12918.3166ms (CPU freq 3399999470)
+  process_chunk[261639]: 22881962801 (52.10%, 88.49% w/children) 
+  json_sax_parse_file[1]: 5054262702 (11.51%, 100.00% w/children)
+  parse_file_with_sax[1]: 353526 (0.00%, 100.00% w/children)     
+  fast_atof[40000000]: 4955958106 (11.28%)
+  haversine_distance[10000000]: 3961190051 (9.02%)
+  on_key[40000001]: 2111463911 (4.81%)
+  on_number[40000000]: 3776544458 (8.60%, 19.88% w/children)
+  on_end_object[10000001]: 1180525225 (2.69%, 11.71% w/children)
+Result 10011.8833483597973100
+```
+
+Simplified profiling struct
+
+Note: This seems to be consistently slower than the old method.
+```
+Total time: 13468.8033ms (CPU freq 3399999260)
+  process_chunk[261639]: 23711089047 (51.78%, 33588667823.91% w/children)
+  json_sax_parse_file[1]: 5911492526 (12.91%, 100.00% w/children)
+  parse_file_with_sax[1]: 324703 (0.00%, 100.00% w/children)
+  fast_atof[40000000]: 4948159787 (10.81%, 32871080706.15% w/children)
+  haversine_distance[10000000]: 4030083032 (8.80%, 34860832692.26% w/children)
+  on_key[40000001]: 2138713130 (4.67%, 3193696675.98% w/children)
+  on_number[40000000]: 3886249144 (8.49%, 1589417717.14% w/children)
+  on_end_object[10000001]: 1167794700 (2.55%, 27319148552.42% w/children)
+Result 10011.8833483597973100
+```
