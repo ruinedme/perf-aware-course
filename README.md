@@ -161,7 +161,8 @@ Result 10011.8833483597973100
 Repetition testing
 
 Note: Given that I'm using a streaming style of parser and reading 4kb chunks of the file at a time, I don't know how relevant testing various read functions matters.
-Or, maybe it matters more since we have to call it repeatedly?
+Or, maybe it matters more since we have to call it repeatedly? Seems unlikely since json_sax_parse_file calls fread then process_chunk in a loop. fread appears to be 
+reading in the chunks as fast as process_chunk can handle. So right now my bottle neck is likely not reading in the file, but calling process_chunk.
 
 ```
 --- fread ---
