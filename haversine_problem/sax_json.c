@@ -43,18 +43,21 @@ typedef struct
 
 static bool ctx_stack_init(ctx_stack_t *s)
 {
+    START_SCOPE(_s, __func__);
     s->cap = STACK_INIT;
     s->len = 0;
     s->data = malloc(sizeof(ctx_type_t) * s->cap);
 
-    return s->data != NULL;
+    RETURN_VAL(_s, s->data != NULL);
 }
 
 static void ctx_stack_free(ctx_stack_t *s)
 {
+    START_SCOPE(_s,__func__);
     free(s->data);
     s->data = NULL;
     s->cap = s->len = 0;
+    RETURN_VOID(_s);
 }
 
 static bool ctx_stack_push(ctx_stack_t *s, ctx_type_t v)
@@ -96,6 +99,7 @@ typedef struct
 
 static bool sbuf_init(sbuf_t *s, size_t initcap)
 {
+    START_SCOPE(_s, __func__);
     if (initcap == 0)
         initcap = STRING_BUF_INIT;
     s->buf = malloc(initcap);
@@ -106,14 +110,16 @@ static bool sbuf_init(sbuf_t *s, size_t initcap)
     s->len = 0;
     s->cap = initcap;
     s->buf[0] = '\0';
-    return true;
+    RETURN_VAL(_s, true);
 }
 
 static void sbuf_free(sbuf_t *s)
 {
+    START_SCOPE(_s,__func__);
     free(s->buf);
     s->buf = NULL;
     s->len = s->cap = 0;
+    RETURN_VOID(_s);
 }
 
 static bool sbuf_append_char(sbuf_t *s, char c)

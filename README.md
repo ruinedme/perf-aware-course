@@ -112,3 +112,33 @@ Total time: 13343.5953ms (CPU freq 3399997560)
   on_end_object[10000001]: 1180465721 (2.60%, 11.49% w/children)
 Result 10011.8833483597973100
 ```
+
+Profile malloc/free ops
+
+Note: Casey specifically called out the free call in his implementation showing that ~22% of time was spent freeing memory. Hence why I measured them here.
+Due to how this parser is implemented there is only a couple of small mallocs done up front and are not freed until after parsing is done.
+Therefore, memory operations are only a negligble amount of the time.
+
+Note: Casey mentioned that having a lot of blocks profiled that are called many millions of times can cause significant slowdowns. In his case going from 9 seconds to 26 seconds.
+However, when I have functions marked up to be profiled it only adds ~2 seconds of runtime. I'm curious why that might be.
+```
+// Baseline
+Total time: 11220.6858ms (CPU freq 3399998490)
+Result 10011.8833483597973100
+
+// With profiled blocks
+Total time: 13713.2233ms (CPU freq 3399997310)
+  ctx_stack_init[1]: 11508 (0.00%)
+  ctx_stack_free[1]: 1799 (0.00%)
+  sbuf_init[2]: 1075 (0.00%)
+  sbuf_free[2]: 17641 (0.00%)
+  process_chunk[261639]: 24165250256 (51.83%, 87.17% w/children)
+  json_sax_parse_file[1]: 5982281399 (12.83%, 100.00% w/children)
+  parse_file_with_sax[1]: 297196 (0.00%, 100.00% w/children)
+  fast_atof[40000000]: 5368440328 (11.51%)
+  haversine_distance[10000000]: 4094976951 (8.78%)
+  on_key[40000001]: 2060691106 (4.42%)
+  on_number[40000000]: 3773285664 (8.09%, 19.61% w/children)
+  on_end_object[10000001]: 1179658318 (2.53%, 11.31% w/children)
+Result 10011.8833483597973100
+```
