@@ -8,6 +8,4 @@ typedef uint32_t u32;
 typedef double f64;
 typedef unsigned char u8;
 
-#define ArrayCount(Array) (sizeof(Array)/sizeof((Array)[0]))
-
 #endif
