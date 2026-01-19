@@ -1,5 +1,10 @@
 #include "timer.c"
 
+#ifndef PROFILER
+#define PROFILER 0
+#endif
+
+#if PROFILER
 #define MAX_ANCHORS 4096
 
 typedef struct
@@ -10,14 +15,7 @@ typedef struct
     const char *Label;
 } profile_anchor;
 
-typedef struct
-{
-    profile_anchor Anchors[MAX_ANCHORS];
-    u64 StartTSC;
-    u64 EndTSC;
-} profiler;
-
-static profiler GlobalProfiler = {0};
+static profile_anchor GlobalProfilerAnchors[MAX_ANCHORS];
 static u32 GlobalProfilerParent = 0;
 
 typedef struct
@@ -36,10 +34,10 @@ static inline profile_block profile_block_begin(const char *Label, u32 AnchorInd
     pb.Label = Label;
     pb.AnchorIndex = AnchorIndex;
 
-    profile_anchor *anchor = GlobalProfiler.Anchors + pb.AnchorIndex;
+    profile_anchor *anchor = GlobalProfilerAnchors + pb.AnchorIndex;
     pb.OldTSCElapsedInclusive= anchor->TSCElapsedInclusive;
 
-    GlobalProfilerParent = AnchorIndex;
+    GlobalProfilerParent = pb.AnchorIndex;
     pb.StartTSC = ReadCPUTimer();
 
     return pb;
@@ -50,12 +48,12 @@ static inline void profile_block_end(profile_block *pb)
     u64 elasped = ReadCPUTimer() - pb->StartTSC;
     GlobalProfilerParent = pb->ParentIndex;
 
-    profile_anchor *parent = GlobalProfiler.Anchors + pb->ParentIndex;
-    profile_anchor *anchor = GlobalProfiler.Anchors + pb->AnchorIndex;
+    profile_anchor *parent = GlobalProfilerAnchors + pb->ParentIndex;
+    profile_anchor *anchor = GlobalProfilerAnchors + pb->AnchorIndex;
 
     parent->TSCElapsedExclusive -= elasped;
     anchor->TSCElapsedExclusive += elasped;
-    anchor->TSCElapsedInclusive += pb->OldTSCElapsedInclusive + elasped;
+    anchor->TSCElapsedInclusive = pb->OldTSCElapsedInclusive + elasped;
     ++anchor->HitCount;
     anchor->Label = pb->Label;
 }
@@ -77,6 +75,33 @@ static void print_time_elapsed(u64 total_tsc_elapsed, profile_anchor *anchor)
     printf(")\n");
 }
 
+static void print_anchor_data(u64 total_cpu_elapsed){
+    for (u32 AnchorIndex = 0; AnchorIndex < MAX_ANCHORS; ++AnchorIndex)
+    {
+        profile_anchor *Anchor = GlobalProfilerAnchors + AnchorIndex;
+        if (Anchor->TSCElapsedInclusive)
+        {
+            print_time_elapsed(total_cpu_elapsed, Anchor);
+        }
+    }
+}
+
+#else 
+ #define START_SCOPE(...)
+ #define END_SCOPE(...)
+ #define RETURN_VAL(id, x) return x;
+ #define RETURN_VOID(id) return;
+ #define print_anchor_data(...)
+#endif
+
+typedef struct
+{
+    u64 StartTSC;
+    u64 EndTSC;
+} profiler;
+static profiler GlobalProfiler;
+
+
 static void begin_profile()
 {
     GlobalProfiler.StartTSC = ReadCPUTimer();
@@ -94,12 +119,5 @@ static void end_and_print_profile()
         printf("\nTotal time: %0.4fms (CPU freq %llu)\n", 1000.0 * (f64)total_cpu_elapsed / (f64)cpu_freq, cpu_freq);
     }
 
-    for (u32 AnchorIndex = 0; AnchorIndex < MAX_ANCHORS; ++AnchorIndex)
-    {
-        profile_anchor *Anchor = GlobalProfiler.Anchors + AnchorIndex;
-        if (Anchor->TSCElapsedInclusive)
-        {
-            print_time_elapsed(total_cpu_elapsed, Anchor);
-        }
-    }
+    print_anchor_data(total_cpu_elapsed);
 }

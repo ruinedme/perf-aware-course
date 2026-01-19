@@ -10,6 +10,8 @@
 #include <stddef.h>
 #include <ctype.h>
 
+#define PROFILER 1
+
 #include "common.h"
 #include "profiler.c"
 #include "sax_json.c"

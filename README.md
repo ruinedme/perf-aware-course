@@ -101,14 +101,15 @@ Simplified profiling struct
 
 Note: This seems to be consistently slower than the old method.
 ```
-Total time: 13468.8033ms (CPU freq 3399999260)
-  process_chunk[261639]: 23711089047 (51.78%, 33588667823.91% w/children)
-  json_sax_parse_file[1]: 5911492526 (12.91%, 100.00% w/children)
-  parse_file_with_sax[1]: 324703 (0.00%, 100.00% w/children)
-  fast_atof[40000000]: 4948159787 (10.81%, 32871080706.15% w/children)
-  haversine_distance[10000000]: 4030083032 (8.80%, 34860832692.26% w/children)
-  on_key[40000001]: 2138713130 (4.67%, 3193696675.98% w/children)
-  on_number[40000000]: 3886249144 (8.49%, 1589417717.14% w/children)
-  on_end_object[10000001]: 1167794700 (2.55%, 27319148552.42% w/children)
+Total time: 13343.5953ms (CPU freq 3399997560)
+  process_chunk[261639]: 23299264145 (51.36%, 86.88% w/children)
+  json_sax_parse_file[1]: 5949527457 (13.11%, 100.00% w/children)
+  parse_file_with_sax[1]: 764600 (0.00%, 100.00% w/children)
+  fast_atof[40000000]: 5032938717 (11.09%)
+  haversine_distance[10000000]: 4031736240 (8.89%)
+  on_key[40000001]: 2073112858 (4.57%)
+  on_number[40000000]: 3800360451 (8.38%, 19.47% w/children)
+  on_end_object[10000001]: 1180465721 (2.60%, 11.49% w/children)
 Result 10011.8833483597973100
+
 ```
