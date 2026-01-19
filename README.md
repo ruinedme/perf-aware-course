@@ -157,3 +157,25 @@ Total time: 11801.9995ms (CPU freq 3399996810)
   on_end_object[10000001]: 1170611606 (2.92%, 12.90% w/children)  457.764mb at 0.29gb/s
 Result 10011.8833483597973100
 ```
+
+Repetition testing
+
+Note: Given that I'm using a streaming style of parser and reading 4kb chunks of the file at a time, I don't know how relevant testing various read functions matters.
+Or, maybe it matters more since we have to call it repeatedly?
+
+```
+--- fread ---
+Min: 1116478094 (328.376241ms) 3.039427gb/s
+Max: 1657287599 (487.438021ms) 2.047595gb/s
+Avg: 1405072094 (413.256915ms) 2.415145gb/s
+
+--- _read ---
+Min: 1070840839 (314.953506ms) 3.168961gb/s
+Max: 1638477771 (481.905713ms) 2.071101gb/s
+Avg: 1392416200 (409.534590ms) 2.437097gb/s
+
+--- ReadFile ---
+Min: 1057844526 (311.131057ms) 3.207894gb/s
+Max: 1677646303 (493.425881ms) 2.022747gb/s
+Avg: 1382706769 (406.678872ms) 2.454210gb/s
+```

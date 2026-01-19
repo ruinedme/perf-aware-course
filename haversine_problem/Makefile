@@ -24,3 +24,6 @@ build: compile link
 # 	main.c -lsax_json
 # check for x87 instructions
 # grep -E "fld|fstp|faddp|fsubp|fadd|fsub" ./bin/main.s
+
+rep:
+	cl /TC /W4 /nologo /O2 /Febin\rep_test.exe read_overhead_main.c
