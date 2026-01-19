@@ -23,7 +23,6 @@ typedef struct
     void (*error)(void *ud, const char *msg, size_t pos);
 } json_sax_handler_t;
 
-
 #define READ_BUF_SIZE 4096
 #define STRING_BUF_INIT 256
 #define STACK_INIT 64
@@ -43,21 +42,18 @@ typedef struct
 
 static bool ctx_stack_init(ctx_stack_t *s)
 {
-    START_SCOPE(_s, __func__);
     s->cap = STACK_INIT;
     s->len = 0;
     s->data = malloc(sizeof(ctx_type_t) * s->cap);
 
-    RETURN_VAL(_s, s->data != NULL);
+    return s->data != NULL;
 }
 
 static void ctx_stack_free(ctx_stack_t *s)
 {
-    START_SCOPE(_s,__func__);
     free(s->data);
     s->data = NULL;
     s->cap = s->len = 0;
-    RETURN_VOID(_s);
 }
 
 static bool ctx_stack_push(ctx_stack_t *s, ctx_type_t v)
@@ -99,7 +95,6 @@ typedef struct
 
 static bool sbuf_init(sbuf_t *s, size_t initcap)
 {
-    START_SCOPE(_s, __func__);
     if (initcap == 0)
         initcap = STRING_BUF_INIT;
     s->buf = malloc(initcap);
@@ -110,16 +105,14 @@ static bool sbuf_init(sbuf_t *s, size_t initcap)
     s->len = 0;
     s->cap = initcap;
     s->buf[0] = '\0';
-    RETURN_VAL(_s, true);
+    return true;
 }
 
 static void sbuf_free(sbuf_t *s)
 {
-    START_SCOPE(_s,__func__);
     free(s->buf);
     s->buf = NULL;
     s->len = s->cap = 0;
-    RETURN_VOID(_s);
 }
 
 static bool sbuf_append_char(sbuf_t *s, char c)
@@ -300,7 +293,7 @@ static inline bool iswhitespace(char c)
 
 static bool process_chunk(json_sax_parser_t *parser, const char *buf, size_t buflen, int is_final)
 {
-    START_SCOPE(_s, __func__);
+    TIME_BANDWIDTH(_s, __func__, buflen);
     size_t i = 0;
     while (i < buflen)
     {
@@ -355,7 +348,8 @@ static bool process_chunk(json_sax_parser_t *parser, const char *buf, size_t buf
                 parser->state = ST_TRUE;
                 parser->numbuf.len = 0;
 
-                if(!sbuf_append_char(&parser->numbuf, 't')){
+                if (!sbuf_append_char(&parser->numbuf, 't'))
+                {
                     call_error(parser, "alloc failure");
                     RETURN_VAL(_s, false);
                 }
@@ -366,7 +360,8 @@ static bool process_chunk(json_sax_parser_t *parser, const char *buf, size_t buf
             {
                 parser->state = ST_FALSE;
                 parser->numbuf.len = 0;
-                if(!sbuf_append_char(&parser->numbuf, 'f')){
+                if (!sbuf_append_char(&parser->numbuf, 'f'))
+                {
                     call_error(parser, "alloc failure");
                     RETURN_VAL(_s, false);
                 }
@@ -377,7 +372,8 @@ static bool process_chunk(json_sax_parser_t *parser, const char *buf, size_t buf
             {
                 parser->state = ST_NULL;
                 parser->numbuf.len = 0;
-                if(!sbuf_append_char(&parser->numbuf, 'n')){
+                if (!sbuf_append_char(&parser->numbuf, 'n'))
+                {
                     call_error(parser, "alloc failure");
                     RETURN_VAL(_s, false);
                 }
@@ -908,42 +904,55 @@ static bool process_chunk(json_sax_parser_t *parser, const char *buf, size_t buf
     RETURN_VAL(_s, true);
 }
 
-bool json_sax_parse_file(json_sax_parser_t *parser, FILE *f){
+bool json_sax_parse_file(json_sax_parser_t *parser, FILE *f)
+{
     START_SCOPE(_s, __func__);
     char buf[READ_BUF_SIZE];
-    while(1){
-        size_t n = fread(buf,1,READ_BUF_SIZE,f);
-        if(ferror(f)){
+    while (1)
+    {
+        TIME_BANDWIDTH(_f, "fread", READ_BUF_SIZE);
+        size_t n = fread(buf, 1, READ_BUF_SIZE, f);
+        if (ferror(f))
+        {
             call_error(parser, "read error");
             RETURN_VAL(_s, false);
         }
         int is_final = feof(f);
-        if(!process_chunk(parser, buf, n, is_final)) RETURN_VAL(_s, false);
-        if(is_final) break;
+        if (!process_chunk(parser, buf, n, is_final))
+            RETURN_VAL(_s, false);
+        if (is_final)
+            break;
+        END_SCOPE(_f);
     }
 
     RETURN_VAL(_s, true);
 }
 
-bool parse_file_with_sax(const char *filename, const json_sax_handler_t *h, void *ud){
-    START_SCOPE(_s, __func__);
+bool parse_file_with_sax(const char *filename, const json_sax_handler_t *h, void *ud)
+{
     FILE *f = NULL;
-    if(!filename)  f = stdin;
-    else {
+    if (!filename)
+        f = stdin;
+    else
+    {
         f = fopen(filename, "rb");
-        if(!f){
+        if (!f)
+        {
             perror("fopen");
             return false;
         }
     }
     json_sax_parser_t parser;
-    if(!parser_init(&parser, h, ud)){
-        if(f&& f != stdin) fclose(f);
+    if (!parser_init(&parser, h, ud))
+    {
+        if (f && f != stdin)
+            fclose(f);
         return false;
     }
     bool rc = json_sax_parse_file(&parser, f);
     parser_free(&parser);
-    if(f && f != stdin) fclose(f);
+    if (f && f != stdin)
+        fclose(f);
 
-    RETURN_VAL(_s, rc);
+    return rc;
 }

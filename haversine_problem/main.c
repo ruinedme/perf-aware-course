@@ -19,7 +19,7 @@
 #define MAX_FRAC 15
 const f64 EARTH_RADIUS_KM = 6372.8;
 
-static f64 fast_atof(const char *s, size_t len);
+// static f64 fast_atof(const char *s, size_t len);
 static const f64 inv_pow10[MAX_FRAC + 1] = {
     1.0,
     0.1,
@@ -41,7 +41,6 @@ static const f64 inv_pow10[MAX_FRAC + 1] = {
 
 static f64 fast_atof(const char *s, size_t len)
 {
-    START_SCOPE(_s, __func__);
     const char *p = s;
     const char *end = s + len;
     if (p == end)
@@ -114,7 +113,6 @@ static f64 fast_atof(const char *s, size_t len)
     }
 
     f64 result = sign < 0 ? -value : value;
-    END_SCOPE(_s);
     return result;
 }
 
@@ -148,8 +146,7 @@ f64 haversine_distance(pair_t *p, f64 R)
     f64 rootTerm = (pow(sin(dY / 2.0), 2.0)) + cos(y0) * cos(y1) * (pow(sin(dX / 2.0), 2.0));
     f64 result = 2.0 * R * asin(sqrt(rootTerm));
 
-    END_SCOPE(_s);
-    return result;
+    RETURN_VAL(_s, result);
 }
 
 static void acc_init(acc_t *a)
@@ -185,11 +182,9 @@ typedef struct
 
 void on_key(void *ud, const char *key)
 {
-    START_SCOPE(_s,__func__);
     handler_ud_t *h = ud;
     strncpy(h->last_key, key, sizeof(h->last_key) - 1);
     h->last_key[sizeof(h->last_key) - 1] = '\0';
-    RETURN_VOID(_s);
 }
 
 void on_number(void *ud, const char *num_text, size_t len)
@@ -224,7 +219,7 @@ void on_number(void *ud, const char *num_text, size_t len)
 
 void on_end_object(void *ud)
 {
-    START_SCOPE(_s,__func__);
+    TIME_BANDWIDTH(_s,__func__, sizeof(pair_t) + sizeof(f64));
     handler_ud_t *h = ud;
 
     if (h->current.seen == 15)

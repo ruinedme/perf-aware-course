@@ -142,3 +142,18 @@ Total time: 13713.2233ms (CPU freq 3399997310)
   on_end_object[10000001]: 1179658318 (2.53%, 11.31% w/children)
 Result 10011.8833483597973100
 ```
+
+## Moving Data
+
+Add data trhoughput measurements
+
+```
+Total time: 11801.9995ms (CPU freq 3399996810)
+  process_chunk[261639]: 21996033426 (54.82%, 85.30% w/children)  1022.029mb at 0.10gb/s
+  json_sax_parse_file[1]: 6901432 (0.02%, 100.00% w/children)
+  fread[261639]: 5891711575 (14.68%, 99.98% w/children)  1022.031mb at 0.08gb/s
+  haversine_distance[10000000]: 4005627567 (9.98%)
+  on_number[40000000]: 7055495870 (17.58%)
+  on_end_object[10000001]: 1170611606 (2.92%, 12.90% w/children)  457.764mb at 0.29gb/s
+Result 10011.8833483597973100
+```
