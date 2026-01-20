@@ -138,7 +138,7 @@ static f64 deg2rad(f64 degrees)
 // The Haversine function
 f64 haversine_distance(pair_t *p, f64 R)
 {
-    START_SCOPE(_s,__func__);
+    START_SCOPE(_s, __func__);
     f64 dY = deg2rad(p->y1 - p->y0);
     f64 dX = deg2rad(p->x1 - p->x0);
     f64 y0 = deg2rad(p->y0);
@@ -219,7 +219,7 @@ void on_number(void *ud, const char *num_text, size_t len)
 
 void on_end_object(void *ud)
 {
-    TIME_BANDWIDTH(_s,__func__, sizeof(pair_t) + sizeof(f64));
+    TIME_BANDWIDTH(_s, __func__, sizeof(pair_t) + sizeof(f64));
     handler_ud_t *h = ud;
 
     if (h->current.seen == 15)
