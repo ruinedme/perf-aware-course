@@ -115,7 +115,7 @@ Result 10011.8833483597973100
 
 Profile malloc/free ops
 
-Note: Casey specifically called out the free call in his implementation showing that ~22% of time was spent freeing memory. Hence why I measured them here.
+Note: Casey specifically called out the free call in his implementation showing that ~22% of time was spent freeing memory. Hence, why I measured them here.
 Due to how this parser is implemented there is only a couple of small mallocs done up front and are not freed until after parsing is done.
 Therefore, memory operations are only a negligble amount of the time.
 
@@ -216,3 +216,5 @@ Min: 1488839232 (437.894366ms) 2.279261gb/s
 Max: 2050782282 (603.171912ms) 1.654711gb/s
 Avg: 1680120811 (494.153714ms) 2.019767gb/s
 ```
+
+Note: Put the haversine main function into a loop and watched perfmon stats for a while. I did not see any page faults as I suspected since I'm not doing repeated malloc/reallocs. Times oscillated between 10 and 11 seconds with no obvious speedup being gained by repitition testing. The obvious bottleneck at this point is the process_chunk function, and have already identified a couple of points that could be optimized.
