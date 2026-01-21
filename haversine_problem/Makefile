@@ -1,6 +1,6 @@
 .PHONY: build
 
-compile:
+#compile:
 #   not entirely sure all of the linker options are required, but it works
 #	still need to manually copy dll to working directory of the exe though
 #	apparently the order of source files to linked files is important.
@@ -9,12 +9,11 @@ compile:
 # 	-Wall -Wextra -Wpedantic -o bin/main.exe \
 # 	-I../sax_json -L../sax_json/bin -Wl,-rpath,'${ORIGIN}/../sax_json/bin' \
 # 	main.c -lsax_json
-	cl /c /TC /W4 /nologo /O2 /Zi /Fdbin\main.pdb /Fobin\main.obj main.c
 
-link:
-	cl /nologo /Febin\main.exe /DL bin\main.obj
 
-build: compile link
+build:
+# 	cl  /TC /W4 /nologo /O2 /Zi /Fdbin\main.pdb /Fobin\main.obj /Fmbin\main.map /Febin\main.exe main.c
+	cl  /TC /W4 /nologo /O2 /Zi main.c /Fdbin\main.pdb /Fobin\main.obj /Fmbin\main.map /Febin\main.exe /link /DEBUG:FULL
 
 # asm:
 # 	gcc -std=c99 -O2 \
