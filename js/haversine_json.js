@@ -84,7 +84,7 @@ for (pair of JSONInput['pairs']) {
 
 const average = acc.sum / acc.count;
 const endTime = epochTime(new Date());
-console.log(`Result ${average}`);
+console.log(`Result ${average.toFixed(16)}`);
 console.log(`Input = ${midTime - startTime} seconds`);
 console.log(`Math = ${endTime - midTime} seconds`);
 console.log(`Total = ${endTime - startTime} seconds`);
