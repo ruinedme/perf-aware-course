@@ -175,3 +175,37 @@ Total time: 9699.0662ms (CPU freq 3399999880)
   on_end_object[10000001]: 1145542810 (3.47%, 16.31% w/children)  457.764mb at 0.28gb/s
 Result 10011.8833483597973100
 ```
+
+## TEST 8 -- Remove strncpy in on_key and memcmp in on_number
+
+The obvious targets at this point are various memory operations that are done repeatedly. on_key calls strncpy 40000001 times, and on_number called memcmp 40000000 * 4 times. These changes do take advantage knowing the schema of the json we're parsing. If the format ever changes this will break
+
+Baseline
+```
+Total time: 10654.0437ms (CPU freq 3399999550)
+  sbuf_append_bytes[80173963]: 2269104582 (6.26%)
+  process_chunk[261639]: 14919924007 (41.19%, 84.01% w/children)  1022.029mb at 0.11gb/s
+  json_sax_parse_file[1]: 6774676 (0.02%, 100.00% w/children)
+  fread[261639]: 5784602357 (15.97%, 99.98% w/children)  1022.031mb at 0.09gb/s
+  haversine_distance[10000000]: 4057252594 (11.20%)
+  on_key[40000001]: 1881702778 (5.19%)
+  on_number[40000000]: 6151865552 (16.98%)
+  on_end_object[10000001]: 1152085533 (3.18%, 14.38% w/children)  457.764mb at 0.29gb/s
+Result 10011.8833483597973100
+```
+
+```
+Total time: 7746.0827ms (CPU freq 3399997370)
+Result 10011.8833483597973100
+
+Total time: 9656.4483ms (CPU freq 3399996660)
+  sbuf_append_bytes[80173963]: 2238417421 (6.82%)
+  process_chunk[261639]: 14120124957 (43.01%, 82.50% w/children)  1022.029mb at 0.13gb/s
+  json_sax_parse_file[1]: 6741636 (0.02%, 100.00% w/children)
+  fread[261639]: 5738435612 (17.48%, 99.98% w/children)  1022.031mb at 0.10gb/s
+  haversine_distance[10000000]: 3936012818 (11.99%)
+  on_key[40000001]: 950082531 (2.89%)
+  on_number[40000000]: 4690870194 (14.29%)
+  on_end_object[10000001]: 1150818662 (3.51%, 15.49% w/children)  457.764mb at 0.30gb/s
+Result 10011.8833483597973100
+```

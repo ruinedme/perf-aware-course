@@ -176,43 +176,47 @@ static f64 acc_average(const acc_t *a)
 typedef struct
 {
     pair_t current;
-    char last_key[16];
     acc_t acc;
 } handler_ud_t;
 
 void on_key(void *ud, const char *key)
 {
-    handler_ud_t *h = ud;
-    strncpy(h->last_key, key, sizeof(h->last_key) - 1);
-    h->last_key[sizeof(h->last_key) - 1] = '\0';
+    TIME_FUNCTION(_s);
+    // TODO: Is there a way to avoid this branch?
+    if(*key != 'p'){
+        handler_ud_t *h = ud;
+        h->current.seen++;
+    }
+    RETURN_VOID(_s);
 }
 
 void on_number(void *ud, const char *num_text, size_t len)
 {
 
-    START_SCOPE(_s, __func__);
+    TIME_FUNCTION(_s);
     handler_ud_t *h = ud;
     f64 v = fast_atof(num_text, len);
-
-    if (strcmp(h->last_key, "x0") == 0)
-    {
-        h->current.x0 = v;
-        h->current.seen += 1;
-    }
-    else if (strcmp(h->last_key, "y0") == 0)
-    {
-        h->current.y0 = v;
-        h->current.seen += 2;
-    }
-    else if (strcmp(h->last_key, "x1") == 0)
-    {
-        h->current.x1 = v;
-        h->current.seen += 4;
-    }
-    else if (strcmp(h->last_key, "y1") == 0)
-    {
-        h->current.y1 = v;
-        h->current.seen += 8;
+    // TODO: Is there someway to do this without switch/if statement?
+    // I could maybe make current an array of f64 then use current.seen as an offset?
+    switch(h->current.seen){
+        case 1:{
+            h->current.x0 = v;
+        }
+            break;
+        case 2:{
+            h->current.y0 = v;
+        }
+            break;
+        case 3:{
+            h->current.x1 = v;
+        }
+            break;
+        case 4:{
+            h->current.y1 = v;
+        }
+            break;
+        default:
+            fprintf(stderr,"ERROR: Invalid h->current.seen in on_number");
     }
     END_SCOPE(_s);
 }
@@ -222,7 +226,7 @@ void on_end_object(void *ud)
     TIME_BANDWIDTH(_s, __func__, sizeof(pair_t) + sizeof(f64));
     handler_ud_t *h = ud;
 
-    if (h->current.seen == 15)
+    if (h->current.seen > 0)
     {
         f64 val = haversine_distance(&h->current, EARTH_RADIUS_KM);
         acc_add(&h->acc, val);
@@ -230,7 +234,6 @@ void on_end_object(void *ud)
 
     // Blank current for next object
     memset(&h->current, 0, sizeof(h->current));
-    h->last_key[0] = '\0';
     RETURN_VOID(_s);
 }
 

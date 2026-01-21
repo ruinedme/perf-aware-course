@@ -117,22 +117,24 @@ static void sbuf_free(sbuf_t *s)
 
 static bool sbuf_append_char(sbuf_t *s, char c)
 {
+    TIME_FUNCTION(_s);
     if (s->len + 1 >= s->cap)
     {
         size_t ncap = s->cap * 2;
         char *n = realloc(s->buf, ncap);
         if (!n)
-            return false;
+            RETURN_VAL(_s,false);
         s->buf = n;
         s->cap = ncap;
     }
     s->buf[s->len++] = c;
     s->buf[s->len] = '\0';
-    return true;
+    RETURN_VAL(_s, true);
 }
 
 static bool sbuf_append_bytes(sbuf_t *s, const char *bytes, size_t n)
 {
+    TIME_FUNCTION(_s);
     if (s->len + n >= s->cap)
     {
         size_t ncap = s->cap;
@@ -141,7 +143,7 @@ static bool sbuf_append_bytes(sbuf_t *s, const char *bytes, size_t n)
 
         char *arr = realloc(s->buf, ncap);
         if (!arr)
-            return false;
+            RETURN_VAL(_s, false);
         s->buf = arr;
         s->cap = ncap;
     }
@@ -149,7 +151,7 @@ static bool sbuf_append_bytes(sbuf_t *s, const char *bytes, size_t n)
     memcpy(s->buf + s->len, bytes, n);
     s->len += n;
     s->buf[s->len] = '\0';
-    return true;
+    RETURN_VAL(_s, true);
 }
 
 static bool sbuf_append_utf8_codepoint(sbuf_t *s, uint32_t cp)
@@ -384,13 +386,7 @@ outer:
             else if (c == '-' || (c >= '0' && c <= '9'))
             {
                 parser->numbuf.len = 0;
-                if (!sbuf_append_char(&parser->numbuf, c))
-                {
-                    call_error(parser, "alloc failure");
-                    RETURN_VAL(_s, false);
-                }
                 parser->state = ST_NUMBER;
-                i++;
                 continue;
             }
             else if (c == ']')

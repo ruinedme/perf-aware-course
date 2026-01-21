@@ -120,6 +120,7 @@ static void print_anchor_data(u64 total_cpu_elapsed, u64 timer_freq)
 #else
 #define TIME_BANDWIDTH(...)
 #define START_SCOPE(...)
+#define TIME_FUNCTION(...)
 #define END_SCOPE(...)
 #define RETURN_VAL(id, x) return x;
 #define RETURN_VOID(id) return;
