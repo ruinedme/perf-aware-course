@@ -297,6 +297,7 @@ static bool process_chunk(json_sax_parser_t *parser, const char *buf, size_t buf
     size_t i = 0;
     while (i < buflen)
     {
+outer:
         char c = buf[i];
         parser->position++;
 
@@ -553,10 +554,6 @@ static bool process_chunk(json_sax_parser_t *parser, const char *buf, size_t buf
                     is_key = true;
                     parser->u_remaining = 0; // reset the marker
                 }
-                else
-                {
-                    is_key = false;
-                }
 
                 if (is_key && ctx_stack_top(&parser->stack) == CTX_OBJECT && parser->handlers.key)
                 {
@@ -572,20 +569,27 @@ static bool process_chunk(json_sax_parser_t *parser, const char *buf, size_t buf
                 i++;
                 continue;
             }
-            else if (c == '\\')
-            {
-                parser->state = ST_STRING_ESC;
-                i++;
-                continue;
-            }
             else
             {
-                if (!sbuf_append_char(&parser->strbuf, c))
+                size_t start = i;
+                while (i < buflen)
                 {
-                    call_error(parser, "alloc failure");
-                    return false;
+                    c = buf[++i];
+                    if (c == '\\')
+                    {
+                        parser->state = ST_STRING_ESC;
+                        i++;
+                        goto outer;
+                    }else if(c == '"'){
+                        break;
+                    }
                 }
-                i++;
+                parser->position = i;
+                size_t end = i - start;
+                if(!sbuf_append_bytes(&parser->strbuf, buf+start, end)){
+                    call_error(parser, "alloc failure");
+                    RETURN_VAL(_s, false);
+                }
                 continue;
             }
         }
@@ -671,14 +675,30 @@ static bool process_chunk(json_sax_parser_t *parser, const char *buf, size_t buf
         break;
         case ST_NUMBER:
         {
+            // TODO: There might be a better way to do this, but this is already quite a bit faster than before
             if ((c >= '0' && c <= '9') || c == '+' || c == '-' || c == '.' || c == 'e' || c == 'E')
             {
-                if (!sbuf_append_char(&parser->numbuf, c))
+                size_t start = i;
+                while (i < buflen)
+                {
+                    c = buf[++i];
+                    if ((c >= '0' && c <= '9') || c == '+' || c == '-' || c == '.' || c == 'e' || c == 'E')
+                    {
+                        continue;
+                    }
+                    break;
+                }
+                parser->position = i;
+                size_t end = i - start;
+
+                // At this point it doesn't matter if we hit the boundry just push what we have to numbuf
+                if (!sbuf_append_bytes(&parser->numbuf, buf + start, end))
                 {
                     call_error(parser, "alloc failure");
                     RETURN_VAL(_s, false);
                 }
-                i++;
+
+                // Just continue then the loop will fall into the else branch if the number was completed
                 continue;
             }
             else
