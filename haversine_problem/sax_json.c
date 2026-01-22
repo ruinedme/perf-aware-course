@@ -15,8 +15,8 @@ typedef struct
     void (*end_object)(void *ud);
     void (*start_array)(void *ud);
     void (*end_array)(void *ud);
-    void (*key)(void *ud, const char *key);
-    void (*string)(void *ud, const char *value);
+    void (*key)(void *ud, const char *key, size_t len);
+    void (*string)(void *ud, const char *value, size_t len);
     void (*number)(void *ud, const char *num_text, size_t len);
     void (*boolean)(void *ud, bool boolean_value);
     void (*null_value)(void *ud);
@@ -123,7 +123,7 @@ static bool sbuf_append_char(sbuf_t *s, char c)
         size_t ncap = s->cap * 2;
         char *n = realloc(s->buf, ncap);
         if (!n)
-            RETURN_VAL(_s,false);
+            RETURN_VAL(_s, false);
         s->buf = n;
         s->cap = ncap;
     }
@@ -216,7 +216,8 @@ typedef struct
     ctx_stack_t stack;
     sbuf_t strbuf;
     sbuf_t numbuf;
-
+    size_t str_start;
+    size_t num_start;
     parse_state_t state;
     size_t position;
 
@@ -250,6 +251,8 @@ static bool parser_init(json_sax_parser_t *p, const json_sax_handler_t *h, void 
     p->position = 0;
     p->u_remaining = 0;
     p->expecting_surrogate = 0;
+    p->str_start = 0;
+    p->num_start = 0;
     return true;
 }
 
@@ -265,16 +268,6 @@ static void call_error(json_sax_parser_t *p, const char *msg)
     p->state = ST_ERROR;
     if (p->handlers.error)
         p->handlers.error(p->user_data, msg, p->position);
-}
-
-static int emit_number(json_sax_parser_t *p)
-{
-    if (p->handlers.number)
-        p->handlers.number(p->user_data, p->numbuf.buf, p->numbuf.len);
-    p->numbuf.len = 0;
-    if (p->numbuf.cap > 0)
-        p->numbuf.buf[0] = '\0';
-    return 0;
 }
 
 static int hex_val(char c)
@@ -299,7 +292,7 @@ static bool process_chunk(json_sax_parser_t *parser, const char *buf, size_t buf
     size_t i = 0;
     while (i < buflen)
     {
-outer:
+    outer:
         char c = buf[i];
         parser->position++;
 
@@ -553,14 +546,31 @@ outer:
 
                 if (is_key && ctx_stack_top(&parser->stack) == CTX_OBJECT && parser->handlers.key)
                 {
-                    parser->handlers.key(parser->user_data, parser->strbuf.buf);
+                    if (parser->strbuf.len == 0)
+                    {
+                        parser->handlers.key(parser->user_data, buf + (parser->str_start), i - parser->str_start);
+                    }
+                    else
+                    {
+                        parser->handlers.key(parser->user_data, parser->strbuf.buf, parser->strbuf.len);
+                    }
                 }
                 else
                 {
                     if (parser->handlers.string)
-                        parser->handlers.key(parser->user_data, parser->strbuf.buf);
+                    {
+                        if (parser->strbuf.len == 0)
+                        {
+                            parser->handlers.string(parser->user_data, buf + (parser->str_start), i - parser->str_start);
+                        }
+                        else
+                        {
+                            parser->handlers.string(parser->user_data, buf + (parser->str_start), i - parser->str_start);
+                        }
+                    }
                 }
                 parser->strbuf.len = 0;
+                parser->str_start = 0;
                 parser->state = ST_AFTER_COLON;
                 i++;
                 continue;
@@ -576,15 +586,27 @@ outer:
                         parser->state = ST_STRING_ESC;
                         i++;
                         goto outer;
-                    }else if(c == '"'){
+                    }
+                    else if (c == '"')
+                    {
                         break;
                     }
                 }
-                parser->position = i;
-                size_t end = i - start;
-                if(!sbuf_append_bytes(&parser->strbuf, buf+start, end)){
-                    call_error(parser, "alloc failure");
-                    RETURN_VAL(_s, false);
+                parser->position += i;
+
+                // got the whole string
+                if (i < buflen && parser->strbuf.len == 0)
+                {
+                    parser->str_start = start;
+                }
+                else
+                {
+                    size_t end = i - start;
+                    if (!sbuf_append_bytes(&parser->strbuf, buf + start, end))
+                    {
+                        call_error(parser, "alloc failure");
+                        RETURN_VAL(_s, false);
+                    }
                 }
                 continue;
             }
@@ -684,14 +706,19 @@ outer:
                     }
                     break;
                 }
-                parser->position = i;
-                size_t end = i - start;
-
-                // At this point it doesn't matter if we hit the boundry just push what we have to numbuf
-                if (!sbuf_append_bytes(&parser->numbuf, buf + start, end))
+                parser->position += i;
+                if (i < buflen && parser->numbuf.len == 0)
                 {
-                    call_error(parser, "alloc failure");
-                    RETURN_VAL(_s, false);
+                    parser->num_start = start;
+                }
+                else
+                {
+                    size_t end = i - start;
+                    if (!sbuf_append_bytes(&parser->numbuf, buf + start, end))
+                    {
+                        call_error(parser, "alloc failure");
+                        RETURN_VAL(_s, false);
+                    }
                 }
 
                 // Just continue then the loop will fall into the else branch if the number was completed
@@ -699,7 +726,18 @@ outer:
             }
             else
             {
-                emit_number(parser);
+                if (parser->handlers.number){
+                    if(parser->numbuf.len == 0){
+                        parser->handlers.number(parser->user_data, buf+(parser->num_start), i - (parser->num_start));
+                    }else {
+                        parser->handlers.number(parser->user_data, parser->numbuf.buf, parser->numbuf.len);
+                    }
+                }
+                    
+                parser->numbuf.len = 0;
+                parser->num_start = 0;
+                if (parser->numbuf.cap > 0)
+                    parser->numbuf.buf[0] = '\0';
                 ctx_type_t top = ctx_stack_top(&parser->stack);
                 if (top == CTX_ARRAY)
                     parser->state = ST_ARRAY_ELEM;

@@ -179,9 +179,11 @@ typedef struct
     acc_t acc;
 } handler_ud_t;
 
-void on_key(void *ud, const char *key)
+void on_key(void *ud, const char *key, size_t _len)
 {
     TIME_FUNCTION(_s);
+    // main.c(182): warning C4100: '_len': unreferenced parameter
+    (void)&_len;
     // TODO: Is there a way to avoid this branch?
     if(*key != 'p'){
         handler_ud_t *h = ud;
