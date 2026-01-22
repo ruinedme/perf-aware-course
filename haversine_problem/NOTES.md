@@ -41,6 +41,7 @@ Timings with RDTSC.
         - i did this for strings and numbers, but did not see much improvment overall
     - move the number parser into the JSON parser and have the parser return doubles by default. This would allow the parser to avoid some memcpy and other allocations which could make this faster.
     - what if instead of parsing the whole chunk, we scan from the end of the buffer to the first single character that we can determine would not be a value. Then we can guarantee that a string/number will never land on a boundry and would effectively elminate the need for memcpy calls. This would require some overhead in the json_sax_parse_file function to adjust the FD position back
+        - Tested, this is slower than doing some amount of memcpy calls
 4. Try an NDJSON approach. There is a JSON streaming method that uses newlines as a delimiter for parsing smaller objects inside of larger ones.
     - Not going to go this route anymore. The current parser seems fine since the bottleneck was not parsing the JSON but converting strings to numbers
 99. Multi threading. A last resort, but the calculation of any haversine pair is not dependent upon any other pair.
@@ -258,5 +259,106 @@ Total time: 7453.0611ms (CPU freq 3399997560)
   on_key[40000001]: 958980952 (3.78%)
   on_number[40000000]: 4684636875 (18.49%)
   on_end_object[10000001]: 1158467439 (4.57%, 20.17% w/children)  457.764mb at 0.30gb/s
+Result 10011.8833483597973100
+```
+
+## TEST 11 -- Chunk align on single character tokens (`{`,`}`,`"`,`,`,`[`,`]`, `:`)
+
+The idea here is to try to ensure we are never in the middle of a key/string/number on a chunk boundry. This could maybe be an issue for JSON with strings that contain these values, but I am keeping the boundry check in place for strings and numbers so it will do a memcpy in these instances, but should be fine for the JSON we're intending to parse with this.
+
+This did sucessfully remove the calls to sbuf_append_bytes which call memcpy, but did make it slower overall. I'm guessing fseek() is more expensive to call than memcpy()?
+
+```
+Total time: 7916.8641ms (CPU freq 3399996420)
+Result 10011.8833483597973100
+
+Total time: 8921.8727ms (CPU freq 3399999070)
+  process_chunk[262112]: 12263571893 (40.43%, 76.15% w/children)  1022.029mb at 0.15gb/s
+  json_sax_parse_file[1]: 6765241 (0.02%, 100.00% w/children)
+  fread[262112]: 7226548938 (23.82%, 99.98% w/children)  1023.879mb at 0.11gb/s
+  haversine_distance[10000000]: 3978378453 (13.12%)
+  on_key[40000001]: 955006840 (3.15%)
+  on_number[40000000]: 4744502333 (15.64%)
+  on_end_object[10000001]: 1159163036 (3.82%, 16.94% w/children)  457.764mb at 0.30gb/s
+Result 10011.8833483597973100
+```
+
+## TEST 12 -- Loop over all whitespace at the top of the state machine.
+
+Previously it check the state, then check if c was whitespace and go back to the top of the loop. Now we just scan until c is not white space then proceed with checking state and move forward. This is in combination with TEST 11 removed
+
+This did reduce time a little bit
+
+```
+Total time: 7570.4957ms (CPU freq 3399999080)
+Result 10011.8833483597973100
+
+Total time: 8647.2836ms (CPU freq 3399998580)
+  sbuf_append_bytes[367490]: 22537764 (0.08%)
+  process_chunk[261639]: 12694668645 (43.18%, 80.18% w/children)  1022.029mb at 0.14gb/s
+  json_sax_parse_file[1]: 7478820 (0.03%, 100.00% w/children)
+  fread[261639]: 5819562227 (19.79%, 99.97% w/children)  1022.031mb at 0.12gb/s
+  haversine_distance[10000000]: 3999432255 (13.60%)
+  on_key[40000001]: 955560161 (3.25%)
+  on_number[40000000]: 4753550855 (16.17%)
+  on_end_object[10000001]: 1147532628 (3.90%, 17.51% w/children)  457.764mb at 0.30gb/s
+Result 10011.8833483597973100
+```
+
+## TEST 13 -- Chunk align on tokens with 4x buffer size
+
+Combo of test 10 and 11, it is faster, but still slightly slower than test 10 overall.
+
+```
+Total time: 6629.4230ms (CPU freq 3399997590)
+Result 10011.8833483597973100
+
+Total time: 7384.9221ms (CPU freq 3399998550)
+  process_chunk[65439]: 11504756446 (45.82%, 88.42% w/children)  1022.029mb at 0.15gb/s
+  json_sax_parse_file[1]: 3554794 (0.01%, 100.00% w/children)
+  fread[65439]: 2904116422 (11.57%, 99.98% w/children)  1022.500mb at 0.14gb/s
+  haversine_distance[10000000]: 3881653116 (15.46%)
+  on_key[40000001]: 948851008 (3.78%)
+  on_number[40000000]: 4679338105 (18.64%)
+  on_end_object[10000001]: 1185979371 (4.72%, 20.18% w/children)  457.764mb at 0.30gb/s
+Result 10011.8833483597973100
+```
+
+## TEST 14 -- Chunk align on 64k buffer
+
+This is faster than 10 but only slightly.
+
+```
+Total time: 6245.3411ms (CPU freq 3399997160)
+Result 10011.8833483597973100
+
+Total time: 7243.1564ms (CPU freq 3399998430)
+  process_chunk[16354]: 11963467275 (48.58%, 92.72% w/children)  1022.029mb at 0.15gb/s
+  json_sax_parse_file[1]: 983072 (0.00%, 100.00% w/children)
+  fread[16354]: 1791100056 (7.27%, 99.99% w/children)  1022.188mb at 0.14gb/s
+  haversine_distance[10000000]: 3937032813 (15.99%)
+  on_key[40000001]: 957626758 (3.89%)
+  on_number[40000000]: 4800882483 (19.49%)
+  on_end_object[10000001]: 1175070570 (4.77%, 20.76% w/children)  457.764mb at 0.30gb/s
+Result 10011.8833483597973100
+```
+
+## TEST 15  -- Non chunk aligned with 64k buffer
+
+Even with 22k memcpy's it's still marginally faster this way than to do token chunk alignment
+
+```
+Total time: 6085.2714ms (CPU freq 3399996790)
+Result 10011.8833483597973100
+
+Total time: 7737.1731ms (CPU freq 3399999050)
+  sbuf_append_bytes[22866]: 3977232 (0.02%)
+  process_chunk[16352]: 13537416037 (51.46%, 93.37% w/children)  1022.029mb at 0.14gb/s
+  json_sax_parse_file[1]: 1692259 (0.01%, 100.00% w/children)
+  fread[16352]: 1740555111 (6.62%, 99.99% w/children)  1022.062mb at 0.13gb/s
+  haversine_distance[10000000]: 4007167943 (15.23%)
+  on_key[40000001]: 964848219 (3.67%)
+  on_number[40000000]: 4902778016 (18.64%)
+  on_end_object[10000001]: 1147356561 (4.36%, 19.59% w/children)  457.764mb at 0.29gb/s
 Result 10011.8833483597973100
 ```

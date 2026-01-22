@@ -23,7 +23,7 @@ typedef struct
     void (*error)(void *ud, const char *msg, size_t pos);
 } json_sax_handler_t;
 
-#define READ_BUF_SIZE 4096
+#define READ_BUF_SIZE 4096*16
 #define STRING_BUF_INIT 256
 #define STACK_INIT 64
 
@@ -219,7 +219,7 @@ typedef struct
     size_t str_start;
     size_t num_start;
     parse_state_t state;
-    size_t position;
+    // size_t position;
 
     // For \uXXXX sequences
     int u_remaining;
@@ -248,7 +248,7 @@ static bool parser_init(json_sax_parser_t *p, const json_sax_handler_t *h, void 
         p->handlers = *h;
     p->user_data = ud;
     p->state = ST_WS;
-    p->position = 0;
+    // p->position = 0;
     p->u_remaining = 0;
     p->expecting_surrogate = 0;
     p->str_start = 0;
@@ -267,7 +267,8 @@ static void call_error(json_sax_parser_t *p, const char *msg)
 {
     p->state = ST_ERROR;
     if (p->handlers.error)
-        p->handlers.error(p->user_data, msg, p->position);
+        // p->handlers.error(p->user_data, msg, p->position);
+        p->handlers.error(p->user_data, msg, 0);
 }
 
 static int hex_val(char c)
@@ -294,18 +295,16 @@ static bool process_chunk(json_sax_parser_t *parser, const char *buf, size_t buf
     {
     outer:
         char c = buf[i];
-        parser->position++;
-
+    
+        while(parser->state == ST_WS && iswhitespace(c)){
+            c = buf[++i];
+            // parser->position++;
+        }
         switch (parser->state)
         {
         case ST_WS:
         case ST_VALUE:
         {
-            if (iswhitespace(c))
-            {
-                i++;
-                continue;
-            }
             if (c == '{')
             {
                 if (parser->handlers.start_object)
@@ -592,7 +591,7 @@ static bool process_chunk(json_sax_parser_t *parser, const char *buf, size_t buf
                         break;
                     }
                 }
-                parser->position += i;
+                // parser->position += i - start;
 
                 // got the whole string
                 if (i < buflen && parser->strbuf.len == 0)
@@ -706,7 +705,7 @@ static bool process_chunk(json_sax_parser_t *parser, const char *buf, size_t buf
                     }
                     break;
                 }
-                parser->position += i;
+                // parser->position += i - start;
                 if (i < buflen && parser->numbuf.len == 0)
                 {
                     parser->num_start = start;
@@ -905,7 +904,7 @@ static bool process_chunk(json_sax_parser_t *parser, const char *buf, size_t buf
                 parser->u_value = (uint16_t)((parser->u_value << 4) | (uint16_t)v);
                 needed--;
                 j++;
-                parser->position++;
+                // parser->position++;
             }
             size_t consumed = j - (int)i;
             i += consumed;
@@ -972,6 +971,29 @@ bool json_sax_parse_file(json_sax_parser_t *parser, FILE *f)
             RETURN_VAL(_s, false);
         }
         int is_final = feof(f);
+        // === CHUNK ALGIN ON TOKEN ===
+        // if(!is_final){
+        //     size_t end = n-1;
+        //     char c = 0;
+
+        //     while(end > 0){
+        //         c = *(buf + end);
+        //         if(c == '{' || c == '}' || c == ':'|| c == '[' || c == ']' || c == ','|| c == '\r' || c == '\n'){
+        //             break;
+        //         }
+        //         end--;
+        //     }
+        //     if(end+1 != n){
+        //         long offset = (long)(end - n+ 1);
+        //         if(fseek(f, offset, SEEK_CUR) != 0){
+        //             fprintf(stderr, "Error fseek() failed");
+        //             RETURN_VAL(_s, false);
+        //         }
+
+        //         n = end + 1;
+        //     }
+        // }
+        // printf("\n%.*s\n",(int)n, buf);
         if (!process_chunk(parser, buf, n, is_final))
             RETURN_VAL(_s, false);
         if (is_final)

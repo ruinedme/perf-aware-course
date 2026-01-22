@@ -218,7 +218,7 @@ void on_number(void *ud, const char *num_text, size_t len)
         }
             break;
         default:
-            fprintf(stderr,"ERROR: Invalid h->current.seen in on_number");
+            fprintf(stderr,"ERROR: Invalid h->current.seen in on_number %u\n", h->current.seen);
     }
     END_SCOPE(_s);
 }
