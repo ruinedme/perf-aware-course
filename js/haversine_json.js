@@ -20,8 +20,8 @@ function deg2rad(degrees) {
 }
 
 
-const JSONFile = fs.readFileSync('../data/data_10000000.json', { flag: 'r' });
-// const JSONFile = fs.readFileSync('../data/data_sample.json', { flag: 'r' });
+const JSONFile = fs.readFileSync('../data/data_10000000.json', { flag: 'r' });  // Result 10011.8831624295544316
+// const JSONFile = fs.readFileSync('../data/data_sample.json', { flag: 'r' }); // Result  9405.8217375678632379
 
 const startTime = epochTime(new Date());
 // const JSONInput = JSON.parse(JSONFile); // NodeJS can't make strings larger than 512MB. Internally JSON.parse() calls toString() on the passed buffer
