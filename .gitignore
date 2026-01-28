@@ -1,5 +1,6 @@
 bin/
 data/
 .vscode/
-test*
+test*.js
+8086_emu/**/test*
 *.rdbg

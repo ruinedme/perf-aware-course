@@ -223,17 +223,61 @@ Testing CPU frontend
 
 Basically a program can only run as fast as the CPU can decode instructions. The test here is to add variable amounts of nop instructions to the program to see what impacts it has on performance. The more nop instructions that are insterted into a loop the worse the performance is despite no additional computation needing to be done.
 
+```
 --- NOP3x1AllBytes ---
-Min: 1016712117 (299.032989ms) 3.344113gb/s
-Max: 1136190189 (334.173600ms) 2.992457gb/s
-Avg: 1041341248 (306.276851ms) 3.265020gb/s
+--- NOP3x1AllBytes ---
+Min: 1015958340 (298.804330ms) 3.346672gb/s
+Max: 1125691478 (331.078032ms) 3.020436gb/s
+Avg: 1034863320 (304.364489ms) 3.285534gb/s
 
 --- NOP1x3AllBytes ---
-Min: 1356441882 (398.953772ms) 2.506556gb/s
-Max: 1711319023 (503.329474ms) 1.986770gb/s
-Avg: 1412016065 (415.299131ms) 2.407903gb/s
+Min: 1354678771 (398.425670ms) 2.509878gb/s
+Max: 1614222058 (474.760157ms) 2.106327gb/s
+Avg: 1390725112 (409.027289ms) 2.444825gb/s PF: 0.1038 (10104459.6364k/fault)
 
 --- NOP1x9AllBytesASM ---
-Min: 3060475778 (900.140070ms) 1.110938gb/s
-Max: 3370368690 (991.285058ms) 1.008792gb/s
-Avg: 3135793332 (922.292295ms) 1.084255gb/s
+Min: 3050418053 (897.160924ms) 1.114627gb/s
+Max: 3119044426 (917.344682ms) 1.090103gb/s
+Avg: 3093489442 (909.828685ms) 1.099108gb/s
+```
+
+Testing Branch Prediciton
+
+In order for the frontend to be able to decode ahead of execution it will sometimes need to decode instructions past a conditional jump. That is the front end has to predict when a branch will or will not be taken. Hence the term branch predictor. Branch prediciton is an incredibly complex problem and has improved over time with newer CPU's.
+
+```
+--- ConditionalNOP, Never Taken ---
+Min: 1458100549 (428.843107ms) 2.331855gb/s
+Max: 1709998993 (502.929158ms) 1.988352gb/s
+Avg: 1496881028 (440.248864ms) 2.271443gb/s PF: 0.1031 (10171187.2000k/fault)
+
+--- ConditionalNOP, AlwaysTaken ---
+Min: 2094208622 (615.929356ms) 1.623563gb/s
+Max: 2282635314 (671.347679ms) 1.489541gb/s
+Avg: 2130102587 (626.486158ms) 1.596204gb/s
+
+--- ConditionalNOP, Every 2 ---
+Min: 1600131482 (470.615937ms) 2.124875gb/s
+Max: 1772581704 (521.335408ms) 1.918151gb/s
+Avg: 1641743433 (482.854461ms) 2.071017gb/s
+
+--- ConditionalNOP, Every 3 ---
+Min: 1427626113 (419.880246ms) 2.381631gb/s
+Max: 1656687407 (487.249645ms) 2.052336gb/s
+Avg: 1483406245 (436.285785ms) 2.292076gb/s
+
+--- ConditionalNOP, Every 4 ---
+Min: 1343435966 (395.119016ms) 2.530883gb/s
+Max: 1508403515 (443.637752ms) 2.254091gb/s
+Avg: 1384419635 (407.172755ms) 2.455960gb/s
+
+--- ConditionalNOP, CRTRandom ---
+Min: 12864234926 (3783.510318ms) 0.264305gb/s
+Max: 13390957308 (3938.425055ms) 0.253909gb/s
+Avg: 13039529903 (3835.066463ms) 0.260752gb/s
+
+--- ConditionalNOP, OSRandom ---
+Min: 12867952952 (3784.603830ms) 0.264228gb/s
+Max: 13008614391 (3825.973877ms) 0.261371gb/s
+Avg: 12905387874 (3795.613845ms) 0.263462gb/s
+```

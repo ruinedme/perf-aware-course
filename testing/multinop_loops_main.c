@@ -6,20 +6,12 @@
 #include <math.h>
 #include <sys/stat.h>
 
-
-typedef uint8_t u8;
-typedef uint32_t u32;
-typedef uint64_t u64;
-
-typedef int32_t b32;
-
-typedef float f32;
-typedef double f64;
+#include "common.h"
 
 #define ArrayCount(Array) (sizeof(Array)/sizeof((Array)[0]))
 
 #include "buffer.c"
-#include "profiler.c"
+#include "os_platform.c"
 #include "repetition_tester.c"
 
 typedef void ASMFunction(u64 Count, u8 *Data);
@@ -43,6 +35,8 @@ test_function TestFunctions[3] =
 
 int main(){
 
+    InitializeOSPlatform();
+    
     buffer Buffer = AllocateBuffer(1*1024*1024*1024);
     if(IsValid(Buffer)){
         repetition_tester Testers[ArrayCount(TestFunctions)] = {};
@@ -51,7 +45,7 @@ int main(){
                 repetition_tester *Tester = &Testers[FuncIndex];
                 test_function TestFunc = TestFunctions[FuncIndex];
                 printf("\n--- %s ---\n", TestFunc.Name);
-                NewTestWave(Tester, Buffer.Count, GetCPUFreq(100), 10);
+                NewTestWave(Tester, Buffer.Count, GetCPUTimerFreq());
 
                 while(IsTesting(Tester)){
                     BeginTime(Tester);
