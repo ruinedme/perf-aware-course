@@ -23,7 +23,7 @@ typedef struct
     void (*error)(void *ud, const char *msg, size_t pos);
 } json_sax_handler_t;
 
-#define READ_BUF_SIZE 4096*16
+#define READ_BUF_SIZE 4096 * 16
 #define STRING_BUF_INIT 256
 #define STACK_INIT 64
 
@@ -444,7 +444,8 @@ static bool process_chunk(json_sax_parser_t *parser, const char *buf, size_t buf
             }
             else
             {
-                call_error(parser, "unexpected character while parser value");
+                printf("\ncharacter: 0x%x, state %d\n",c, parser->state);
+                call_error(parser, "unexpected character while parsing value");
                 RETURN_VAL(_s, false);
             }
         }
@@ -725,14 +726,18 @@ static bool process_chunk(json_sax_parser_t *parser, const char *buf, size_t buf
             }
             else
             {
-                if (parser->handlers.number){
-                    if(parser->numbuf.len == 0){
-                        parser->handlers.number(parser->user_data, buf+(parser->num_start), i - (parser->num_start));
-                    }else {
+                if (parser->handlers.number)
+                {
+                    if (parser->numbuf.len == 0)
+                    {
+                        parser->handlers.number(parser->user_data, buf + (parser->num_start), i - (parser->num_start));
+                    }
+                    else
+                    {
                         parser->handlers.number(parser->user_data, parser->numbuf.buf, parser->numbuf.len);
                     }
                 }
-                    
+
                 parser->numbuf.len = 0;
                 parser->num_start = 0;
                 if (parser->numbuf.cap > 0)
@@ -961,6 +966,8 @@ bool json_sax_parse_file(json_sax_parser_t *parser, FILE *f)
 {
     START_SCOPE(_s, __func__);
     char buf[READ_BUF_SIZE];
+    // int is_final = 0;
+    // !(is_final = feof(f))
     while (1)
     {
         TIME_BANDWIDTH(_f, "fread", READ_BUF_SIZE);
@@ -971,29 +978,7 @@ bool json_sax_parse_file(json_sax_parser_t *parser, FILE *f)
             RETURN_VAL(_s, false);
         }
         int is_final = feof(f);
-        // === CHUNK ALGIN ON TOKEN ===
-        // if(!is_final){
-        //     size_t end = n-1;
-        //     char c = 0;
 
-        //     while(end > 0){
-        //         c = *(buf + end);
-        //         if(c == '{' || c == '}' || c == ':'|| c == '[' || c == ']' || c == ','|| c == '\r' || c == '\n'){
-        //             break;
-        //         }
-        //         end--;
-        //     }
-        //     if(end+1 != n){
-        //         long offset = (long)(end - n+ 1);
-        //         if(fseek(f, offset, SEEK_CUR) != 0){
-        //             fprintf(stderr, "Error fseek() failed");
-        //             RETURN_VAL(_s, false);
-        //         }
-
-        //         n = end + 1;
-        //     }
-        // }
-        // printf("\n%.*s\n",(int)n, buf);
         if (!process_chunk(parser, buf, n, is_final))
             RETURN_VAL(_s, false);
         if (is_final)
