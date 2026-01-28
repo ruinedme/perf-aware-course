@@ -27,4 +27,4 @@ release:
 # grep -E "fld|fstp|faddp|fsubp|fadd|fsub" ./bin/main.s
 
 rep:
-	cl /TC /W4 /nologo /O2 /Febin\rep_test.exe read_overhead_main.c
+	cl /TC /W4 /nologo /O2 /Febin\rep_test.exe multinop_loops_main.c

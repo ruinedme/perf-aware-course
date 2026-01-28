@@ -9,6 +9,18 @@ typedef struct
 
 #define ArrayCount(Array) (sizeof(Array)/sizeof((Array)[0]))
 
+inline b32 IsValid(buffer Buffer)
+{
+    b32 Result = (Buffer.Data != 0);
+    return Result;
+}
+
+inline b32 IsInBounds(buffer Source, u64 At)
+{
+    b32 Result = (At < Source.Count);
+    return Result;
+}
+
 static buffer AllocateBuffer(size_t Count)
 {
     buffer Result = {};

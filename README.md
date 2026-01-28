@@ -218,3 +218,22 @@ Avg: 1680120811 (494.153714ms) 2.019767gb/s
 ```
 
 Note: Put the haversine main function into a loop and watched perfmon stats for a while. I did not see any page faults as I suspected since I'm not doing repeated malloc/reallocs. Times oscillated between 10 and 11 seconds with no obvious speedup being gained by repitition testing. The obvious bottleneck at this point is the process_chunk function, and have already identified a couple of points that could be optimized.
+
+Testing CPU frontend
+
+Basically a program can only run as fast as the CPU can decode instructions. The test here is to add variable amounts of nop instructions to the program to see what impacts it has on performance. The more nop instructions that are insterted into a loop the worse the performance is despite no additional computation needing to be done.
+
+--- NOP3x1AllBytes ---
+Min: 1016712117 (299.032989ms) 3.344113gb/s
+Max: 1136190189 (334.173600ms) 2.992457gb/s
+Avg: 1041341248 (306.276851ms) 3.265020gb/s
+
+--- NOP1x3AllBytes ---
+Min: 1356441882 (398.953772ms) 2.506556gb/s
+Max: 1711319023 (503.329474ms) 1.986770gb/s
+Avg: 1412016065 (415.299131ms) 2.407903gb/s
+
+--- NOP1x9AllBytesASM ---
+Min: 3060475778 (900.140070ms) 1.110938gb/s
+Max: 3370368690 (991.285058ms) 1.008792gb/s
+Avg: 3135793332 (922.292295ms) 1.084255gb/s
