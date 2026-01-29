@@ -27,3 +27,9 @@ byte_read_asm:
 
 byte_read:
 	cl /TC /W4 /nologo /O2 /Febin\byte_read.exe byte_read.c
+
+read_width_asm:
+	nasm -f win64 -o bin/read_width.obj read_width.asm && lib -nologo -out:bin/read_width.lib bin/read_width.obj
+
+read_width:
+	cl /TC /W4 /nologo /O2 /Febin\read_width.exe read_width.c
