@@ -118,7 +118,8 @@ static f64 fast_atof(const char *s, size_t len)
 
 typedef struct
 {
-    f64 x0, y0, x1, y1;
+    // f64 x0, y0, x1, y1;
+    f64 values[4];
     unsigned seen;
 } pair_t;
 
@@ -139,10 +140,15 @@ static f64 deg2rad(f64 degrees)
 f64 haversine_distance(pair_t *p, f64 R)
 {
     START_SCOPE(_s, __func__);
-    f64 dY = deg2rad(p->y1 - p->y0);
-    f64 dX = deg2rad(p->x1 - p->x0);
-    f64 y0 = deg2rad(p->y0);
-    f64 y1 = deg2rad(p->y1);
+    f64 x0 = p->values[0];
+    f64 y0 = p->values[1];
+    f64 x1 = p->values[2];
+    f64 y1 = p->values[3];
+
+    f64 dY = deg2rad(y1 - y0);
+    f64 dX = deg2rad(x1 - x0);
+    y0 = deg2rad(y0);
+    y1 = deg2rad(y1);
     f64 rootTerm = (pow(sin(dY / 2.0), 2.0)) + cos(y0) * cos(y1) * (pow(sin(dX / 2.0), 2.0));
     f64 result = 2.0 * R * asin(sqrt(rootTerm));
 
@@ -179,47 +185,13 @@ typedef struct
     acc_t acc;
 } handler_ud_t;
 
-void on_key(void *ud, const char *key, size_t _len)
-{
-    TIME_FUNCTION(_s);
-    // main.c(182): warning C4100: '_len': unreferenced parameter
-    (void)&_len;
-    // TODO: Is there a way to avoid this branch?
-    if(*key != 'p'){
-        handler_ud_t *h = ud;
-        h->current.seen++;
-    }
-    RETURN_VOID(_s);
-}
 
 void on_number(void *ud, const char *num_text, size_t len)
 {
-
     TIME_FUNCTION(_s);
     handler_ud_t *h = ud;
     f64 v = fast_atof(num_text, len);
-    // TODO: Is there someway to do this without switch/if statement?
-    // I could maybe make current an array of f64 then use current.seen as an offset?
-    switch(h->current.seen){
-        case 1:{
-            h->current.x0 = v;
-        }
-            break;
-        case 2:{
-            h->current.y0 = v;
-        }
-            break;
-        case 3:{
-            h->current.x1 = v;
-        }
-            break;
-        case 4:{
-            h->current.y1 = v;
-        }
-            break;
-        default:
-            fprintf(stderr,"ERROR: Invalid h->current.seen in on_number %u\n", h->current.seen);
-    }
+    h->current.values[h->current.seen++] = v;
     END_SCOPE(_s);
 }
 
@@ -258,8 +230,8 @@ int main(int argc, char *argv[])
     json_sax_handler_t h = {
         .error = on_error,
         .end_object = on_end_object,
-        .number = on_number,
-        .key = on_key};
+        .number = on_number
+    };
 
     handler_ud_t ud;
     memset(&ud, 0, sizeof(ud));

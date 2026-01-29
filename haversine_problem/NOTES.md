@@ -42,6 +42,15 @@ Timings with RDTSC.
     - move the number parser into the JSON parser and have the parser return doubles by default. This would allow the parser to avoid some memcpy and other allocations which could make this faster.
     - what if instead of parsing the whole chunk, we scan from the end of the buffer to the first single character that we can determine would not be a value. Then we can guarantee that a string/number will never land on a boundry and would effectively elminate the need for memcpy calls. This would require some overhead in the json_sax_parse_file function to adjust the FD position back
         - Tested, this is slower than doing some amount of memcpy calls
+    - Code alignment. The while loop in process_chunk seems to consistently be at 41 bytes into a 64 byte alignment. Does forcing the compiler/linker to align this on a 64 byte boundry improve performance? Given the size of the loop that seems unlikely to matter too much.
+    ```
+    Assembly/Compiler Coding Rule 11. (M impact, H generality) When executing code from the Decoded ICache,
+direct branches that are mostly taken should have all their instruction bytes in a 64B cache line and nearer the end of
+that cache line. Their targets should be at or near the beginning of a 64B cache line.
+    ```
+    Based on this from the Intel Optimization manual, it makes sense that the start of the loop is towards the end of a cache line. So that the main loop body can start near the beginning of the next one
+    - Improve static branch prediction. Basically, you want if statement that commonly resolve to true and you want loop conditions that generally resolve to true. It kinda glosses over `Predict indirect branches to be NOT taken` i'm not really sure what it means by indirect branches.
+    -  Do not put more than four branches in a 16-byte chunk. ST_VALUE case in process_chunk has very dense if statements to check what the next token is. Is there some way to reduce the number of control flow statements needed?
 4. Try an NDJSON approach. There is a JSON streaming method that uses newlines as a delimiter for parsing smaller objects inside of larger ones.
     - Not going to go this route anymore. The current parser seems fine since the bottleneck was not parsing the JSON but converting strings to numbers
 99. Multi threading. A last resort, but the calculation of any haversine pair is not dependent upon any other pair.
@@ -360,5 +369,84 @@ Total time: 7737.1731ms (CPU freq 3399999050)
   on_key[40000001]: 964848219 (3.67%)
   on_number[40000000]: 4902778016 (18.64%)
   on_end_object[10000001]: 1147356561 (4.36%, 19.59% w/children)  457.764mb at 0.29gb/s
+Result 10011.8833483597973100
+```
+
+## TEST 16 -- Mark process_chunk as non-static
+
+Interesting that marking the function as non-static makes the program overall ~500ms faster, but when profiling process_chunk it is ever so slightly slower
+
+Baseline process_chunk is marked static
+```
+Total time: 6402.2077ms (CPU freq 3399997590)
+Result 10011.8833483597973100
+
+Total time: 7261.8771ms (CPU freq 3399997310)
+  sbuf_append_bytes[22866]: 3283311 (0.01%)
+  process_chunk[16352]: 12260948419 (49.66%, 93.08% w/children)  1022.029mb at 0.15gb/s
+  json_sax_parse_file[1]: 1665798 (0.01%, 100.00% w/children)
+  fread[16352]: 1705306460 (6.91%, 99.99% w/children)  1022.062mb at 0.14gb/s
+  haversine_distance[10000000]: 3920781538 (15.88%)
+  on_key[40000001]: 959580278 (3.89%)
+  on_number[40000000]: 4703628710 (19.05%)
+  on_end_object[10000001]: 1134581775 (4.60%, 20.48% w/children)  457.764mb at 0.30gb/s
+Result 10011.8833483597973100
+```
+
+process_chunk is not marked static
+```
+Total time: 6038.4626ms (CPU freq 3399997650)
+Result 10011.8833483597973100
+
+Total time: 7217.6768ms (CPU freq 3399998950)
+  sbuf_append_bytes[22866]: 3304853 (0.01%)
+  process_chunk[16352]: 12234685544 (49.86%, 93.23% w/children)  1022.029mb at 0.15gb/s
+  json_sax_parse_file[1]: 1996385 (0.01%, 100.00% w/children)
+  fread[16352]: 1659110611 (6.76%, 99.99% w/children)  1022.062mb at 0.14gb/s
+  haversine_distance[10000000]: 3887807292 (15.84%)
+  on_key[40000001]: 957638229 (3.90%)
+  on_number[40000000]: 4651471286 (18.95%)
+  on_end_object[10000001]: 1143489196 (4.66%, 20.50% w/children)  457.764mb at 0.30gb/s
+Result 10011.8833483597973100
+```
+
+## TEST 17 -- Make pair_t a fixed sized array
+
+~1/5 of the time spent is spent in the on_number callback which compiles to a very dense cmp/jz chain of instructions. If I instead just insert the numbers into the array at a given offset we can eliminate all of those conditionals. This again does start taking advantage of knowing the kind of JSON we're parsing, and assuming it is known format.
+
+```
+Total time: 5766.1729ms (CPU freq 3399997450)
+Result 10011.8833483597973100
+
+Total time: 6792.8675ms (CPU freq 3399998670)
+  sbuf_append_bytes[22866]: 2986059 (0.01%)
+  process_chunk[16352]: 11903769423 (51.54%, 92.89% w/children)  1022.029mb at 0.16gb/s
+  json_sax_parse_file[1]: 1632439 (0.01%, 100.00% w/children)
+  fread[16352]: 1640322224 (7.10%, 99.99% w/children)  1022.062mb at 0.15gb/s
+  haversine_distance[10000000]: 237042401 (1.03%)
+  on_key[40000001]: 994058198 (4.30%)
+  on_number[40000000]: 4190582403 (18.14%)
+  on_end_object[10000001]: 4124713686 (17.86%, 18.89% w/children)  457.764mb at 0.35gb/s
+Result 10011.8833483597973100
+```
+
+## TEST 18 -- Remove on_key callback
+
+With the changes from TEST 17 the parser does nothing with the keys and simply relies on them being in the right order as they are parsed. This actually makes the program a little bit slower which is odd. The parser does have a check to see if a callback is defined and then calls it. Could be a side effect of branch mis-predictions?
+
+Seems like having process_chunk as non-static slows performance down now? Made process_chunk static again which increased performance
+
+```
+Total time: 5690.8265ms (CPU freq 3399997120)
+Result 10011.8833483597973100
+
+Total time: 6442.9022ms (CPU freq 3399997620)
+  sbuf_append_bytes[22866]: 2934366 (0.01%)
+  process_chunk[16352]: 11809957127 (53.91%, 92.48% w/children)  1022.029mb at 0.17gb/s
+  json_sax_parse_file[1]: 1700462 (0.01%, 100.00% w/children)
+  fread[16352]: 1644827116 (7.51%, 99.99% w/children)  1022.062mb at 0.15gb/s
+  haversine_distance[10000000]: 237952150 (1.09%)
+  on_number[40000000]: 4064182357 (18.55%)
+  on_end_object[10000001]: 4143679261 (18.92%, 20.00% w/children)  457.764mb at 0.35gb/s
 Result 10011.8833483597973100
 ```
