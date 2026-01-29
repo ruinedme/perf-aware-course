@@ -5,3 +5,4 @@ test*.js
 8086_emu/**/test*
 *.rdbg
 testing/*.obj
+*.pdb

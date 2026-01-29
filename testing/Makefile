@@ -33,3 +33,9 @@ read_width_asm:
 
 read_width:
 	cl /TC /W4 /nologo /O2 /Febin\read_width.exe read_width.c
+
+bandwidth_asm:
+	nasm -f win64 -o bin/bandwidth.obj bandwidth.asm && lib -nologo -out:bin/bandwidth.lib bin/bandwidth.obj
+
+bandwidth:
+	cl /TC /W4 /nologo /O2 /Zi /Febin\bandwidth.exe bandwidth.c
