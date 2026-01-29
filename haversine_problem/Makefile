@@ -28,3 +28,6 @@ release:
 
 rep:
 	cl /TC /W4 /nologo /O2 /Febin\rep_test.exe multinop_loops_main.c
+
+parse_bin:
+	cl  /TC /W4 /nologo /O2 /Zi /arch:AVX2 parse_binary.c /Fdbin\parse_binary.pdb /Fobin\parse_binary.obj /Fmbin\parse_binary.map /Febin\parse_binary.exe

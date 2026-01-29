@@ -23,7 +23,8 @@ typedef struct
     void (*error)(void *ud, const char *msg, size_t pos);
 } json_sax_handler_t;
 
-#define READ_BUF_SIZE 4096 * 16
+#define READ_BUF_SIZE 4096 * 16 // 64kb
+// #define READ_BUF_SIZE 4 * 1024 * 1024 // 4MB
 #define STRING_BUF_INIT 256
 #define STACK_INIT 64
 
@@ -966,8 +967,7 @@ bool json_sax_parse_file(json_sax_parser_t *parser, FILE *f)
 {
     START_SCOPE(_s, __func__);
     char buf[READ_BUF_SIZE];
-    // int is_final = 0;
-    // !(is_final = feof(f))
+    // char *buf = malloc(READ_BUF_SIZE);
     while (1)
     {
         TIME_BANDWIDTH(_f, "fread", READ_BUF_SIZE);
@@ -985,7 +985,7 @@ bool json_sax_parse_file(json_sax_parser_t *parser, FILE *f)
             break;
         END_SCOPE(_f);
     }
-
+    // free(buf);
     RETURN_VAL(_s, true);
 }
 

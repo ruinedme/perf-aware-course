@@ -450,3 +450,13 @@ Total time: 6442.9022ms (CPU freq 3399997620)
   on_end_object[10000001]: 4143679261 (18.92%, 20.00% w/children)  457.764mb at 0.35gb/s
 Result 10011.8833483597973100
 ```
+
+## TEST 19 -- How fast could a naive appraoch using a binary file go.
+
+Out of curiosity i wanted to see how how long it would take to read a binary file of doubles and perform the same haversine computations on them. This could probably go faster with loop unrolling, SIMD, and multithreading to get under 1 second.
+
+Release build with /O2
+```
+Total time: 1319.2947ms (CPU freq 3399996610)
+Result 10011.8831624295544316
+```
