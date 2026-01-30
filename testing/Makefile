@@ -39,3 +39,9 @@ bandwidth_asm:
 
 bandwidth:
 	cl /TC /W4 /nologo /O2 /Zi /Febin\bandwidth.exe bandwidth.c
+
+unaligned_bandwidth_asm:
+	nasm -f win64 -o bin/unaligned_bandwidth.obj unaligned_bandwidth.asm && lib -nologo -out:bin/unaligned_bandwidth.lib bin/unaligned_bandwidth.obj
+
+unaligned_bandwidth:
+	cl /TC /W4 /nologo /O2 /Zi /Febin\unaligned_bandwidth.exe unaligned_bandwidth.c
