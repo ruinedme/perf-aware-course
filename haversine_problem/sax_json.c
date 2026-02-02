@@ -23,8 +23,9 @@ typedef struct
     void (*error)(void *ud, const char *msg, size_t pos);
 } json_sax_handler_t;
 
-#define READ_BUF_SIZE 4096 * 16 // 64kb
-// #define READ_BUF_SIZE 4 * 1024 * 1024 // 4MB
+// #define READ_BUF_SIZE 4096 * 16 // 64kb
+#define READ_BUF_SIZE 1024 * 256 // 256 kb
+// #define READ_BUF_SIZE 1 * 1024 * 1024 // 4MB
 #define STRING_BUF_INIT 256
 #define STACK_INIT 64
 
@@ -288,7 +289,7 @@ static inline bool iswhitespace(char c)
     return (c == ' ' || c == '\t' || c == '\n' || c == '\r');
 }
 
-static bool process_chunk(json_sax_parser_t *parser, const char *buf, size_t buflen, int is_final)
+bool process_chunk(json_sax_parser_t *parser, const char *buf, size_t buflen, int is_final)
 {
     TIME_BANDWIDTH(_s, __func__, buflen);
     size_t i = 0;

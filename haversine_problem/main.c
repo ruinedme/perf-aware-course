@@ -10,7 +10,7 @@
 #include <stddef.h>
 #include <ctype.h>
 
-#define PROFILER 1
+#define PROFILER 0
 
 #include "common.h"
 #include "profiler.c"
@@ -204,10 +204,11 @@ void on_end_object(void *ud)
     {
         f64 val = haversine_distance(&h->current, EARTH_RADIUS_KM);
         acc_add(&h->acc, val);
+        h->current.seen = 0;
     }
 
     // Blank current for next object
-    memset(&h->current, 0, sizeof(h->current));
+    // memset(&h->current, 0, sizeof(h->current));
     RETURN_VOID(_s);
 }
 
