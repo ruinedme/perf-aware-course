@@ -45,3 +45,9 @@ unaligned_bandwidth_asm:
 
 unaligned_bandwidth:
 	cl /TC /W4 /nologo /O2 /Zi /Febin\unaligned_bandwidth.exe unaligned_bandwidth.c
+
+cache_indexing_asm:
+	nasm -f win64 -o bin/cache_indexing.obj cache_indexing.asm && lib -nologo -out:bin/cache_indexing.lib bin/cache_indexing.obj
+
+cache_indexing:
+	cl /TC /W4 /nologo /O2 /Zi /Febin\cache_indexing.exe cache_indexing.c
