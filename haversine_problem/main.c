@@ -4,16 +4,17 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-#include <math.h>
+
 #include <time.h>
 #include <stdint.h>
 #include <stddef.h>
 #include <ctype.h>
 
-#define PROFILER 0
+#define PROFILER 1
 
 #include "common.h"
 #include "profiler.c"
+#include "_math.c"
 #include "sax_json.c"
 
 #define MAX_FRAC 15
@@ -116,12 +117,12 @@ static f64 fast_atof(const char *s, size_t len)
     return result;
 }
 
-typedef struct
-{
-    // f64 x0, y0, x1, y1;
-    f64 values[4];
-    unsigned seen;
-} pair_t;
+// typedef struct
+// {
+//     // f64 x0, y0, x1, y1;
+//     f64 values[4];
+//     unsigned seen;
+// } pair_t;
 
 typedef struct
 {
@@ -129,31 +130,6 @@ typedef struct
     f64 c;
     size_t count;
 } acc_t;
-
-static f64 deg2rad(f64 degrees)
-{
-    f64 result = 0.017453292519943295 * degrees;
-    return result;
-}
-
-// The Haversine function
-f64 haversine_distance(pair_t *p, f64 R)
-{
-    START_SCOPE(_s, __func__);
-    f64 x0 = p->values[0];
-    f64 y0 = p->values[1];
-    f64 x1 = p->values[2];
-    f64 y1 = p->values[3];
-
-    f64 dY = deg2rad(y1 - y0);
-    f64 dX = deg2rad(x1 - x0);
-    y0 = deg2rad(y0);
-    y1 = deg2rad(y1);
-    f64 rootTerm = (pow(sin(dY / 2.0), 2.0)) + cos(y0) * cos(y1) * (pow(sin(dX / 2.0), 2.0));
-    f64 result = 2.0 * R * asin(sqrt(rootTerm));
-
-    RETURN_VAL(_s, result);
-}
 
 static void acc_init(acc_t *a)
 {
@@ -184,7 +160,6 @@ typedef struct
     pair_t current;
     acc_t acc;
 } handler_ud_t;
-
 
 void on_number(void *ud, const char *num_text, size_t len)
 {
@@ -231,8 +206,7 @@ int main(int argc, char *argv[])
     json_sax_handler_t h = {
         .error = on_error,
         .end_object = on_end_object,
-        .number = on_number
-    };
+        .number = on_number};
 
     handler_ud_t ud;
     memset(&ud, 0, sizeof(ud));
@@ -249,6 +223,5 @@ int main(int argc, char *argv[])
     // === DISPLAY RESULT ===
     end_and_print_profile();
     printf("Result %.16f\n", avg);
-
     return EXIT_SUCCESS;
 }

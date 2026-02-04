@@ -885,3 +885,56 @@ Stride,gb/s
 8064,104.916303
 8128,105.755045
 ```
+
+## Polynomial evaluation
+
+Identifying non-inlined math functions
+
+Basically the compilier emits call instructions to the various trig functions rather than inlining them.
+Performing calls is more expensive than inlining the functions.
+
+Also the compiler is emitting a branch to check the value being passed to the sqrt call to verify we are not passing a negative value first
+
+Haversine distance ASM (truncated for brevity)
+```
+haversine_distance PROC                       ; COMDAT
+$LN19:
+....
+        mov     rbx, rcx
+        call    sin
+        vmovsd  xmm2, QWORD PTR [rbx+16]
+        vsubsd  xmm3, xmm2, QWORD PTR [rbx]
+        vmulsd  xmm4, xmm3, xmm9
+        vmovaps xmm10, xmm0
+        vmulsd  xmm0, xmm4, QWORD PTR __real@3fe0000000000000
+        call    sin
+        vmovaps xmm7, xmm0
+        vmulsd  xmm0, xmm9, xmm8
+        call    cos
+        vmovaps xmm6, xmm0
+        vmulsd  xmm0, xmm9, QWORD PTR [rbx+8]
+        call    cos
+        vmulsd  xmm2, xmm6, xmm0
+        vmulsd  xmm1, xmm7, xmm7
+        vmulsd  xmm3, xmm2, xmm1
+        vmulsd  xmm0, xmm10, xmm10
+        vaddsd  xmm0, xmm3, xmm0
+        vxorpd  xmm1, xmm1, xmm1
+        ; This cmp/jump is not needed since we know we will not be passing in any negative values
+        vucomisd xmm1, xmm0
+        ja      SHORT $LN15@haversine_
+        vsqrtsd xmm0, xmm0, xmm0
+        jmp     SHORT $LN16@haversine_
+$LN15@haversine_:
+        call    sqrt
+$LN16@haversine_:
+        call    asin
+```
+
+Ranges encounterd during processing
+```
+sin min -3.139775824517161 max 3.140498377751188 // ~[-PI,+PI] 
+cos min -1.570796204026968 max 1.570796293984414 // ~[-PI/2,+PI/2]
+sqrt min 0.000000030899628 max 0.999999974791406 // ~[0,1]
+asin min 0.000175782900169 max 0.999999987395703 // ~[0,1]
+```

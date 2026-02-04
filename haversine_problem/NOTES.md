@@ -460,3 +460,48 @@ Release build with /O2
 Total time: 1319.2947ms (CPU freq 3399996610)
 Result 10011.8831624295544316
 ```
+
+## TEST 20 -- Remove standard library math calls
+
+Remove pow(), and divide operations
+
+```
+// Relase build
+Total time: 5716.1668ms (CPU freq 3399998980)
+Result 10011.8833483597973100
+```
+
+Replace sqrt call with intrinsics
+```
+// Release build
+Total time: 5576.2919ms (CPU freq 3399999240)
+Result 10011.8833483597973100
+```
+
+Replace sin and cos calls.
+I also appear to be getting to the point where if the CPU/OS is doing anything else i start getting fluctuations of up to +- 1ms
+```
+// Release build
+Total time: 5353.8950ms (CPU freq 3399997950)
+Result 10011.8833369442818366
+```
+
+Replace asin call
+```
+// Release build
+Total time: 5318.5966ms (CPU freq 3399996850)
+Result 10011.8833483597954910 error: 0.0000000000018190
+```
+
+It is interesting that since the math functions in the haversine distance were replaced the time spent in the distance function has increased despite the fact that the overall runtime has been reduced. on_end_object() calls haversine_distance and there is a clear reduction of time spent in that call by ~10%, but haversine_distance gained ~5% runtime. Overall runtime was reduced ~7%
+```
+Total time: 6432.5277ms (CPU freq 3399996140)
+  haversine_distance[10000000]: 1398610728 (6.39%)
+  sbuf_append_bytes[5732]: 1012126 (0.00%)
+  process_chunk[4088]: 12736782403 (58.24%, 92.96% w/children)  1022.029mb at 0.17gb/s
+  json_sax_parse_file[1]: 1662818 (0.01%, 100.00% w/children)
+  fread[4088]: 1537257792 (7.03%, 99.99% w/children)  1022.250mb at 0.16gb/s
+  on_number[40000000]: 4440436821 (20.30%)
+  on_end_object[10000001]: 1753829088 (8.02%, 14.41% w/children)  457.764mb at 0.48gb/s
+Result 10011.8833483597954910
+```
