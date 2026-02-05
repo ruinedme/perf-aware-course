@@ -136,7 +136,7 @@ static bool sbuf_append_char(sbuf_t *s, char c)
 
 static bool sbuf_append_bytes(sbuf_t *s, const char *bytes, size_t n)
 {
-    TIME_FUNCTION(_s);
+    // TIME_FUNCTION(_s);
     if (s->len + n >= s->cap)
     {
         size_t ncap = s->cap;
@@ -145,7 +145,8 @@ static bool sbuf_append_bytes(sbuf_t *s, const char *bytes, size_t n)
 
         char *arr = realloc(s->buf, ncap);
         if (!arr)
-            RETURN_VAL(_s, false);
+            // RETURN_VAL(_s, false);
+            return false;
         s->buf = arr;
         s->cap = ncap;
     }
@@ -153,7 +154,8 @@ static bool sbuf_append_bytes(sbuf_t *s, const char *bytes, size_t n)
     memcpy(s->buf + s->len, bytes, n);
     s->len += n;
     s->buf[s->len] = '\0';
-    RETURN_VAL(_s, true);
+    // RETURN_VAL(_s, true);
+    return true;
 }
 
 static bool sbuf_append_utf8_codepoint(sbuf_t *s, uint32_t cp)
@@ -966,28 +968,31 @@ bool process_chunk(json_sax_parser_t *parser, const char *buf, size_t buflen, in
 
 bool json_sax_parse_file(json_sax_parser_t *parser, FILE *f)
 {
-    START_SCOPE(_s, __func__);
+    // START_SCOPE(_s, __func__);
     char buf[READ_BUF_SIZE];
     // char *buf = malloc(READ_BUF_SIZE);
     while (1)
     {
-        TIME_BANDWIDTH(_f, "fread", READ_BUF_SIZE);
+        // TIME_BANDWIDTH(_f, "fread", READ_BUF_SIZE);
         size_t n = fread(buf, 1, READ_BUF_SIZE, f);
         if (ferror(f))
         {
             call_error(parser, "read error");
-            RETURN_VAL(_s, false);
+            // RETURN_VAL(_f, false);
+            return false;
         }
         int is_final = feof(f);
 
         if (!process_chunk(parser, buf, n, is_final))
-            RETURN_VAL(_s, false);
+            // RETURN_VAL(_f, false);
+            return false;
         if (is_final)
             break;
-        END_SCOPE(_f);
+        // END_SCOPE(_f);
     }
     // free(buf);
-    RETURN_VAL(_s, true);
+    // RETURN_VAL(_s, true);
+    return true;
 }
 
 bool parse_file_with_sax(const char *filename, const json_sax_handler_t *h, void *ud)

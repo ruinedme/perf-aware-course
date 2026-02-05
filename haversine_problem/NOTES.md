@@ -505,3 +505,21 @@ Total time: 6432.5277ms (CPU freq 3399996140)
   on_end_object[10000001]: 1753829088 (8.02%, 14.41% w/children)  457.764mb at 0.48gb/s
 Result 10011.8833483597954910
 ```
+
+## TEST 21 -- Restructure haversine_distance
+
+Expand and combine the math operations that the haversine distance performs. This is part of the performance aware course. The reference implementation parses the whole JSON upfront and stores the parsed numbers into an object array, then does all the haversine calclations. Whereas i'm using a streaming based parser i perform the calculations as i finish parsing whole pairs ie in the on_end_object() callback. I don't see much in terms of performance gain when doing this, but i suspect that is because i am not doing them in a loop where the cpu has time to build up the pipeline.
+
+```
+// Release build
+Total time: 5174.4057ms (CPU freq 3399999270)
+Result 10011.8833483597954910
+
+Total time: 6627.1276ms (CPU freq 3399997680)
+  haversine_distance[10000000]: 1123823284 (4.99%)
+  process_chunk[4088]: 12340018267 (54.77%, 93.36% w/children)  1022.029mb at 0.16gb/s
+  fast_atof[40000000]: 4131026594 (18.33%)
+  on_number[40000000]: 2082084892 (9.24%, 27.57% w/children)
+  on_end_object[10000001]: 1359793604 (6.03%, 11.02% w/children)  457.764mb at 0.61gb/s
+Result 10011.8833483597954910
+```

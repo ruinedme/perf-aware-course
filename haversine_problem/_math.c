@@ -41,42 +41,10 @@ static inline f64 sqrt_w(f64 x)
     return result;
 }
 
-static f64 sin_w(f64 OrigX)
+static inline f64 asin_w(f64 X2)
 {
-    f64 PosX = fabs(OrigX);
-    f64 X = (PosX > PI_2) ? (PI - PosX) : PosX;
-    
-    f64 X2 = X*X;
-    
-    f64 R = 0x1.883c1c5deffbep-49;
-    R = fma(R, X2, -0x1.ae43dc9bf8ba7p-41);
-    R = fma(R, X2, 0x1.6123ce513b09fp-33);
-    R = fma(R, X2, -0x1.ae6454d960ac4p-26);
-    R = fma(R, X2, 0x1.71de3a52aab96p-19);
-    R = fma(R, X2, -0x1.a01a01a014eb6p-13);
-    R = fma(R, X2, 0x1.11111111110c9p-7);
-    R = fma(R, X2, -0x1.5555555555555p-3);
-    R = fma(R, X2, 0x1p0);
-    R *= X;
-    
-    f64 Result = (OrigX < 0) ? -R : R;
-    
-    return Result;
-}
+    f64 X = sqrt_w(X2);
 
-static f64 cos_w(f64 x)
-{
-    f64 r = sin_w(x + PI_2);
-    return r;
-    // return cos(x);
-}
-
-static f64 asin_w(f64 OrigX)
-{
-    bool needsTransform = (OrigX > 0.7071067811865475244); // 1/sqrt(2)
-    f64 X = needsTransform ? sqrt_w(1.0 - OrigX * OrigX) : OrigX;
-    f64 X2 = Square(X);
-    
     f64 R = 0x1.dfc53682725cap-1;
     R = fma(R, X2, -0x1.bec6daf74ed61p1);
     R = fma(R, X2, 0x1.8bf4dadaf548cp2);
@@ -98,27 +66,70 @@ static f64 asin_w(f64 OrigX)
     R = fma(R, X2, 0x1p0);
     R *= X;
 
-    f64 Result = needsTransform ? (PI_2 - R) : R;
-    return Result;
-    // return asin(x);
+    return R;
+}
+
+inline f64 SineCoreWithPrefix(f64 A, f64 B, f64 C)
+{
+    f64 X = fma(A, B, C);
+    f64 X2 = X * X;
+
+    // NOTE(casey): These minimax coefficients were donated by Demetri Spanos
+    f64 R = 0x1.883c1c5deffbep-49;
+    R = fma(R, X2, -0x1.ae43dc9bf8ba7p-41);
+    R = fma(R, X2, 0x1.6123ce513b09fp-33);
+    R = fma(R, X2, -0x1.ae6454d960ac4p-26);
+    R = fma(R, X2, 0x1.71de3a52aab96p-19);
+    R = fma(R, X2, -0x1.a01a01a014eb6p-13);
+    R = fma(R, X2, 0x1.11111111110c9p-7);
+    R = fma(R, X2, -0x1.5555555555555p-3);
+    R = fma(R, X2, 0x1p0);
+    R *= X;
+
+    return R;
 }
 
 // The Haversine function
 f64 haversine_distance(pair_t *p, f64 R)
 {
     START_SCOPE(_s, __func__);
-    f64 x0 = p->values[0];
-    f64 y0 = p->values[1];
-    f64 x1 = p->values[2];
-    f64 y1 = p->values[3];
-    f64 dY = deg2rad(y1 - y0);
-    f64 dX = deg2rad(x1 - x0);
-    y0 = deg2rad(y0);
-    y1 = deg2rad(y1);
+    f64 lat1 = p->values[1];
+    f64 lat2 = p->values[3];
+    f64 lon1 = p->values[0];
+    f64 lon2 = p->values[2];
 
-    // f64 rootTerm = (pow(sin(dY / 2.0), 2.0)) + cos(y0) * cos(y1) * (pow(sin(dX / 2.0), 2.0));
-    f64 rootTerm = Square(sin_w(dY * 0.5)) + cos_w(y0) * cos_w(y1) * (Square(sin_w(dX * 0.5)));
-    f64 result = 2.0 * R * asin_w(sqrt_w(rootTerm));
+    f64 RadC = 0.01745329251994329577;
+    f64 HalfRadC = RadC / 2.0;
+    f64 HalfPi = PI / 2.0;
+    f64 Deg180 = 180.0;
+
+    f64 SLC1 = (lat1 < 0) ? RadC : -RadC;
+    f64 SLC2 = (lat2 < 0) ? RadC : -RadC;
+
+    f64 DLat = fabs(lat2 - lat1);
+    f64 DLon = fabs(lon2 - lon1);
+    f64 SLC0 = (DLat < Deg180) ? HalfRadC : -HalfRadC;
+    f64 SLC3 = (DLon < Deg180) ? HalfRadC : -HalfRadC;
+    f64 ALC0 = (DLat < Deg180) ? 0 : PI;
+    f64 ALC3 = (DLon < Deg180) ? 0 : PI;
+
+    f64 S1 = SineCoreWithPrefix(SLC1, lat1, HalfPi);
+    f64 S2 = SineCoreWithPrefix(SLC2, lat2, HalfPi);
+    f64 S0 = SineCoreWithPrefix(SLC0, DLat, ALC0);
+    f64 S3 = SineCoreWithPrefix(SLC3, DLon, ALC3);
+
+    f64 b = 2.0 * R;
+    f64 a = fma(S0, S0, S1 * S2 * S3 * S3);
+
+    bool NeedsTransform = (a > 0.5);
+    f64 RangeA = NeedsTransform ? (1.0 - a) : a;
+    f64 asinR = asin_w(RangeA);
+    f64 RangeR = NeedsTransform ? (1.57079632679489661923 - asinR) : asinR;
+
+    // f64 rootTerm = (pow(sin(dY / 2.0), 2.0)) + cos(y0) * cos(y1) * (pow(sin(dX / 2.0), 2.0)); // inital
+    // f64 rootTerm = Square(sin_w(dY * 0.5)) + cos_w(y0) * cos_w(y1) * (Square(sin_w(dX * 0.5))); // replace functions
+    // f64 result = 2.0 * R * asin_w(sqrt_w(rootTerm));
+    f64 result = b * RangeR;
 
     RETURN_VAL(_s, result);
 }

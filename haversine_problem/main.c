@@ -42,6 +42,7 @@ static const f64 inv_pow10[MAX_FRAC + 1] = {
 
 static f64 fast_atof(const char *s, size_t len)
 {
+    TIME_FUNCTION(_s);
     const char *p = s;
     const char *end = s + len;
     if (p == end)
@@ -114,7 +115,8 @@ static f64 fast_atof(const char *s, size_t len)
     }
 
     f64 result = sign < 0 ? -value : value;
-    return result;
+    RETURN_VAL(_s, result);
+    // return result;
 }
 
 // typedef struct
