@@ -10,18 +10,19 @@
 #include <stddef.h>
 #include <ctype.h>
 
-#define PROFILER 0
+#define PROFILER 1
 
 #include "common.h"
 #include "profiler.c"
+#include "_math.c"
 const f64 EARTH_RADIUS_KM = 6372.8;
 
-typedef struct
-{
-    // f64 x0, y0, x1, y1;
-    f64 values[4];
-    unsigned seen;
-} pair_t;
+// typedef struct
+// {
+//     // f64 x0, y0, x1, y1;
+//     f64 values[4];
+//     unsigned seen;
+// } pair_t;
 
 typedef struct
 {
@@ -52,31 +53,6 @@ static f64 acc_average(const acc_t *a)
     if (a->count == 0)
         return 0.0;
     return a->sum / (f64)a->count;
-}
-
-static f64 deg2rad(f64 degrees)
-{
-    f64 result = 0.017453292519943295 * degrees;
-    return result;
-}
-
-// The Haversine function
-f64 haversine_distance(pair_t *p, f64 R)
-{
-    START_SCOPE(_s, __func__);
-    f64 x0 = p->values[0];
-    f64 y0 = p->values[1];
-    f64 x1 = p->values[2];
-    f64 y1 = p->values[3];
-
-    f64 dY = deg2rad(y1 - y0);
-    f64 dX = deg2rad(x1 - x0);
-    y0 = deg2rad(y0);
-    y1 = deg2rad(y1);
-    f64 rootTerm = (pow(sin(dY / 2.0), 2.0)) + cos(y0) * cos(y1) * (pow(sin(dX / 2.0), 2.0));
-    f64 result = 2.0 * R * asin(sqrt(rootTerm));
-
-    RETURN_VAL(_s, result);
 }
 
 int main(int argc, char *argv[])
@@ -116,7 +92,7 @@ int main(int argc, char *argv[])
     acc_init(&acc);
 
     size_t offset = 0;
-
+    f64 a = 0.0;
     while(offset < count){
         f64 x0 = buf[offset++];
         f64 y0 = buf[offset++];
@@ -128,10 +104,12 @@ int main(int argc, char *argv[])
         };
         f64 value = haversine_distance(&pair, EARTH_RADIUS_KM);
         acc_add(&acc, value);
+        a += value;
     }
     f64 avg = acc_average(&acc);
     free(buf);
     end_and_print_profile();
-    printf("Result %.16f\n", avg);
+    printf("Result acc %.16f\n", avg);
+    printf("Result   a %.16f\n", a / acc.count);
     return 0;
 }

@@ -522,4 +522,10 @@ Total time: 6627.1276ms (CPU freq 3399997680)
   on_number[40000000]: 2082084892 (9.24%, 27.57% w/children)
   on_end_object[10000001]: 1359793604 (6.03%, 11.02% w/children)  457.764mb at 0.61gb/s
 Result 10011.8833483597954910
+
+// Parse Binary version w/ updated haversine distance
+// Some how the result is less accurate, and the kahan add is more inaccurate than normal floating point adds, but there is an overall 2x increase performance
+Total time: 587.2093ms (CPU freq 3399997040)
+Result acc 10011.8831624295544316 // kahan add error:  0.00018593065215100069
+Result   a 10011.8831624291451590 // normal add error: 0.0001859302428783849
 ```

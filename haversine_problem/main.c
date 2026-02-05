@@ -119,19 +119,14 @@ static f64 fast_atof(const char *s, size_t len)
     // return result;
 }
 
-// typedef struct
-// {
-//     // f64 x0, y0, x1, y1;
-//     f64 values[4];
-//     unsigned seen;
-// } pair_t;
-
 typedef struct
 {
     f64 sum;
     f64 c;
     size_t count;
 } acc_t;
+
+f64 basic_acc = 0.0;
 
 static void acc_init(acc_t *a)
 {
@@ -181,6 +176,7 @@ void on_end_object(void *ud)
     {
         f64 val = haversine_distance(&h->current, EARTH_RADIUS_KM);
         acc_add(&h->acc, val);
+        // basic_acc += val;
         h->current.seen = 0;
     }
 
@@ -221,9 +217,11 @@ int main(int argc, char *argv[])
     }
 
     f64 avg = acc_average(&ud.acc);
-
+    // f64 basic_avg = basic_acc /(f64)ud.acc.count;
     // === DISPLAY RESULT ===
     end_and_print_profile();
-    printf("Result %.16f\n", avg);
+    f64 ref_avg = 10011.8833483597973100;
+    printf("Result %.16f, error: %.15f\n", avg, ref_avg - avg);
+    // printf("Result %.16f, error: %.15f\n", basic_avg, ref_avg - basic_avg);
     return EXIT_SUCCESS;
 }

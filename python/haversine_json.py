@@ -18,11 +18,11 @@ def HaversineOfDegrees(x0,y0,x1,y1,R):
     y0 = radians(y0)
     y1 = radians(y1)
     
-    rootTerm = (sin(dY/2)**2) + cos(y0)*cos(y1)*(sin(dX/2)**2)
-    result = 2*R*asin(sqrt(rootTerm))
+    rootTerm = (sin(dY/2.0)**2.0) + cos(y0)*cos(y1)*(sin(dX/2.0)**2.0)
+    result = 2.0*R*asin(sqrt(rootTerm))
     return result
 
-EarthRadiuskm = 6371
+EarthRadiuskm = 6372.8
 sum = 0
 count = 0
 
